@@ -8,7 +8,7 @@
 
 ## 遊ぶ
 
-**https://rayoguma.github.io/Moribito/**
+**https://rayoguma.github.io/save-all-tilde/**
 
 - ブラウザで開くだけで遊べます（インストール不要）
 - パソコンのブラウザ（キーボード）で遊ぶのがおすすめです

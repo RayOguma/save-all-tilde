@@ -241,7 +241,7 @@
 
 ## 5. 公開（GitHub Pages）
 
-リポジトリ: https://github.com/RayOguma/Moribito
+リポジトリ: https://github.com/RayOguma/save-all-tilde
 
 **完成までは非公開（Private）で開発し、遊べる状態になったら公開（Public）にする。**
 
@@ -251,7 +251,7 @@
   1. Settings → General → Danger Zone → Change repository visibility → Public
   2. Settings → Pages → Source を「GitHub Actions」にする
   3. Actions タブから Deploy を実行（または何か push する）
-  4. `https://rayoguma.github.io/Moribito/` で遊べることを確かめ、URL や QR コードを配る
+  4. `https://rayoguma.github.io/save-all-tilde/` で遊べることを確かめ、URL や QR コードを配る
 - Firebase（ログイン機能）を入れたら、承認済みドメインに `rayoguma.github.io` を追加する
 
 📝 公開前に友だちにテストプレイしてもらいたくなったら、リポジトリを非公開のまま遊んでもらう方法（別の無料サービスで限定公開する、など）を考える
