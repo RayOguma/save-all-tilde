@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>save -a ~</title>
+    <meta name="description" content="Linuxコマンドで村を救う謎解きゲーム" />
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <button id="map-toggle" class="icon-btn" type="button" aria-label="地図を開く">🗺</button>
+        <div class="brand">save -a ~ <span class="brand-sub">save all of Tilde</span></div>
+        <div id="chapter-label"></div>
+        <nav id="tools">
+          <button id="btn-book" class="tool-btn" type="button">📖<span class="lbl"> 手帳</span></button>
+          <button id="btn-hint" class="tool-btn" type="button">💡<span class="lbl"> ヒント</span></button>
+          <button id="btn-guide" class="tool-btn" type="button">❓<span class="lbl"> 遊び方</span></button>
+          <button id="btn-settings" class="tool-btn" type="button">⚙<span class="lbl"> 設定</span></button>
+          <button id="btn-menu" class="tool-btn" type="button">☰<span class="lbl"> メニュー</span></button>
+        </nav>
+      </header>
+      <aside id="side">
+        <div class="pane-title">🗺 地図</div>
+        <div id="map"></div>
+        <div id="party" hidden></div>
+        <div id="bag" hidden></div>
+        <div id="objective-box">
+          <div class="pane-title">🎯 目的</div>
+          <div id="objective"></div>
+        </div>
+      </aside>
+      <section id="termwrap">
+        <div id="frame-plate"></div>
+        <div class="term-inner">
+          <div id="log"></div>
+          <div id="inputbar"></div>
+        </div>
+      </section>
+      <aside id="bookpane" aria-label="コマンド手帳"></aside>
+    </div>
+    <div id="drawer" hidden></div>
+    <div id="settings" hidden></div>
+    <div id="menu" hidden></div>
+    <div id="toasts" aria-live="polite"></div>
+    <div id="tour" hidden></div>
+    <div id="title" hidden></div>
+    <div id="chapter-card" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

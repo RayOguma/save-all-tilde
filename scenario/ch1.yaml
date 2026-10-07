@@ -1,0 +1,644 @@
+# 第1章｜迷いの森 — 探す力（find）
+#
+# 書き方は ch0.yaml の先頭を参照。後の章は root ではなく places で、前の章で作った場所に中身を足す。
+#   places     [{ path, ...場所の設定, children }]  path の場所に children を足し、設定を上書きする
+#   companions 旅についてくる仲間。joinIf が立つと、どこにいても cat 名前 で話せる
+#              variants の at: パス で、今いる場所ごとにせりふを変えられる
+#
+# 物語の流れ（フラグの順）:
+#   talked_squirrel → met_kodama（find を覚える）→ bell_found → got_bell → returned_bell（首飾りを find . で探す）
+#   → got_necklace → told_signs（find * を覚える）
+#   → sign_e / sign_n / sign_w → signs_done（-type d を覚える）→ gate_found → kodama_joined → ch1_clear
+
+chapter: { no: 1, title: 迷いの森, startIf: ch0_clear, startAt: /usr }
+
+# この章をクリアすると手に入るもの（「章を選ぶ」で次の章から始めるとき、テストの準備に使う）
+clear:
+  flags: [talked_squirrel, seen_kodama, met_kodama, bell_found, got_bell, returned_bell, found_necklace, got_necklace, told_signs, found_sign_e, found_sign_n, found_sign_w, sign_e, sign_n, sign_w, signs_done, gate_found, kodama_joined, ch1_clear]
+  learned: [find, "find -name", "find *", "find -type d", "cd -"]
+  discovered: [/lib]
+
+characters:
+  コダマ: { sprite: kodama, color: "#e8eef8", voice: 420 }
+  リス: { sprite: squirrel, color: "#e0a060", voice: 900 }
+  フクロウ: { sprite: owl, color: "#d8c0a0", voice: 330 }
+
+intro:
+  - "（深い緑。木漏れ日。どこかで、鳥が鳴いている。）"
+  - "{name}: 村の外って、こんなに色が……。"
+  - "{name}: ……止まったのは、村だけなんだ。"
+  - "（この森を抜けた先に、賢者スドウがいるはずだ。）"
+guide:
+  - "[知らない場所に来たら、まずは `ls` で見渡してみよう。]"
+
+objectives:
+  - if: gate_found
+    text: "苔むした門へ行こう（`cd`）"
+  - if: signs_done
+    text: "苔むした門を探そう（`find -type d`）"
+  - if: told_signs
+    text: "3枚の道しるべを探そう"
+  - if: got_necklace
+    text: "首飾りをコダマに見せよう"
+  - if: returned_bell
+    text: "切り株の根の奥で、首飾りを探そう（`find .`）"
+  - if: got_bell
+    text: "鈴をコダマに届けよう"
+  - if: bell_found
+    text: "鈴を取りに行こう（`cd`）"
+  - if: met_kodama
+    text: "コダマの鈴を探そう（`find`）"
+  - if: talked_squirrel
+    text: "大きな切り株で、森の精を探そう"
+  - text: "森を進もう"
+
+hints:
+  - if: gate_found
+    steps:
+      - "苔むした門は、霧の谷のずっと奥にある。"
+      - "`find` で出てきた道のりを、そのまま `cd` のうしろに書けば、ひと息に行ける。"
+      - "`cd /usr/霧の谷/深い霧/濃い霧/霧の小道/崖の下/岩かげ/苔むした門`"
+  - if: signs_done
+    steps:
+      - "苔むした門は「場所」だ。紙切れや絵ではない。"
+      - "場所だけを探すなら、`find` に `-type d` を添える。「門」の字を含む名前なら `\"*門*\"` と書く。"
+      - "`find /usr -type d -name \"*門*\"` → 出てきた道のりへ `cd`"
+  - if: told_signs
+    steps:
+      - "道しるべは三枚。名はみな「道しるべ」で始まる。"
+      - "名前の続きがわからないときは `*` を使う。`\"道しるべ*\"` で、道しるべで始まるもの全部（`*` を使うときは `\"` でくるむ）。"
+      - "`find /usr -name \"道しるべ*\"` → 出てきた「/usr/……/道しるべ_○」を、そのまま `cat` のうしろに書く（`cd` しなくても読める）"
+  - if: got_necklace
+    steps:
+      - "首飾りを見つけた。コダマに見せよう。"
+      - "コダマは大きな切り株にいる。"
+      - "`cd /usr/大きな切り株` → `cat .コダマ`"
+  - if: returned_bell
+    steps:
+      - "首飾りは、大きな切り株の根の奥にあるらしい。"
+      - "切り株の中だけを探すなら、場所は `.`（ここ）。切り株で `find .` と唱えよう。"
+      - "`cd /usr/大きな切り株` → `find . -name 首飾り` → 出てきた道のりを `cat` のうしろに書く"
+  - if: got_bell
+    steps:
+      - "鈴をコダマに返そう。"
+      - "コダマは大きな切り株にいる。切り株から一気に飛んできたなら、`cd -` で「さっきいた場所」へ戻れる。"
+      - "`cd -`（または `cd /usr/大きな切り株`）→ `cat .コダマ`"
+  - if: bell_found
+    steps:
+      - "鈴は、倒木のうろの奥、枯れ葉の山の中にある。"
+      - "`find` で出てきた道のりを、そのまま `cd` のうしろに書けば、ひと息に行ける。"
+      - "`cd /usr/倒木/うろ/枯れ葉の山` → `cat 鈴`"
+  - if: met_kodama
+    steps:
+      - "コダマの鈴を、森じゅうから探そう。"
+      - "`find` は、書いた場所の中しか探さない。森じゅうを探すなら、森の入口 `/usr` から。"
+      - "`find /usr -name 鈴` → 出てきた道のりへ `cd` → `cat 鈴`"
+  - if: talked_squirrel
+    steps:
+      - "森の精は、大きな切り株のあたりにいるらしい。"
+      - "見ようとしない人には見えない……隠れたものを見るには `ls -a`。"
+      - "`cd /usr/大きな切り株` → `ls -a` → `cat .コダマ`"
+  - steps:
+      - "森の中を見渡してみよう。誰かいるかもしれない。"
+      - "まわりを見るには `ls`。話しかけるには `cat`。"
+      - "`ls` → `cat リス`"
+
+events:
+  - on: find
+    if: "met_kodama & !got_bell & last_find_empty"
+    once: find_scope_tip
+    lines:
+      - "（切り株のほうから、コダマの声がした。）"
+      - "コダマ: ……ふむ。そこには、なかったようだな。`find` は、書いた場所の中しか探さぬ。"
+      - "コダマ: 森じゅうを探すなら、森の入口――`find /usr -name 鈴` だ。"
+  - on: find
+    found: /usr/倒木/うろ/枯れ葉の山/鈴
+    if: "met_kodama & !got_bell"
+    once: bell_found
+    lines:
+      - "（切り株のほうから、コダマの声がした。）"
+      - "コダマ: ……おお、それだ！ 枯れ葉の山の中に、われの鈴がある。"
+      - "{name}: 倒木の、うろの奥……。"
+      - "コダマ: すまぬが、取ってきてはくれぬか。鈴がないと、われは森の道が見えぬ。……切り株を離れたら、すぐに迷ってしまうのだ。"
+      - "{name}: 森の精なのに、迷っちゃうの？"
+      - "コダマ: ……面目ない。"
+      - "コダマ: 出てきた道のりを、そのまま `cd` のうしろに書けば、ひと息にそこへ行ける。着いたら `cat 鈴` で拾いあげるのだ。"
+      - "{name}: わかった、行ってくる！"
+  - on: find
+    found: /usr/霧の谷/深い霧/濃い霧/霧の小道/崖の下/岩かげ/苔むした門
+    if: "signs_done & !ch1_clear"
+    once: gate_found
+    lines:
+      - "コダマ: ……見つけたな。霧の谷の奥、岩かげの「苔むした門」――それが、森の出口だ。"
+      - "{name}: 霧の、ずっと奥だ……。歩いていたら、きっと迷ってた。"
+      - "コダマ: 出てきた道のりを `cd` のうしろに書けば、霧に迷わず、ひと息に着く。"
+      - "{name}: うん。……じゃあ、行こう！"
+      - "コダマ: うむ。門のところで、待っておるぞ。"
+  - on: cat
+    if: "sign_e & sign_n & sign_w"
+    once: signs_done
+    lines:
+      - "（三つのかけらが、ひとつの言葉になった。）"
+      - "「出口は 苔むした 門のむこう」"
+    effect: bell
+    after:
+      - "（遠くで、鈴の音がした。）"
+      - "コダマ: ……聞こえるか、人の子よ。鈴が戻ったゆえ、森のどこにいても声が届く。"
+      - "{name}: コダマ！ 道しるべ、三枚そろったよ。……「苔むした門」って？"
+      - "コダマ: 森の出口だ。深い霧の奥に隠れておる。歩いて探しても、霧に迷うばかりだろう。"
+      - "{name}: じゃあ `find` で……。でも、どんな名前か、はっきりわからないよ。"
+      - "コダマ: 「門」の字が入っていることは、たしかだ。こういうときも、`*` が使える。"
+      - "コダマ: `*` は「なんでもよい」のしるし。うしろにつけるだけでなく、前にもつけられる。"
+      - "{name}: 前にも……？"
+      - "コダマ: `\"門*\"` なら「門」で始まる名前。`\"*門\"` なら「門」で終わる名前。"
+      - "コダマ: 前とうしろの両方につけた `\"*門*\"` なら、どこかに「門」の字を含む名前が、みな見つかる。"
+      - "{name}: 「苔むした門」も「門」で終わるけど……両方につけておけば、たしかだね。"
+      - "コダマ: うむ。ただし、それだけでは「門」の字を含む紙切れや絵まで、まざってしまう。"
+      - "コダマ: 苔むした門は「場所」だ。場所だけを探すなら、`-type d` を添えるがよい。"
+      - "{name}: `-type d`……。"
+      - "コダマ: `find /usr -type d -name \"*門*\"` ――「門」の字を含む場所だけを、探してくれよう。"
+    learn: ["find -type d"]
+
+# 旅の仲間
+companions:
+  - name: コダマ
+    joinIf: kodama_joined
+    lines:
+      - "コダマ: どうした、人の子よ。道に迷ったなら、`hint` と唱えるがよい。われが知恵を貸そう。"
+    variants:
+      - at: /home/チルダ村
+        lines:
+          - "コダマ: ……ここが、おまえの村か。時が、止まっておるな。"
+          - "コダマ: 守り人の気配が、どこにもない。……急がねばな。"
+      - at: /usr
+        lines:
+          - "コダマ: この森とも、しばしの別れだな。"
+          - "コダマ: ……なに、寂しくはない。森は、どこへも行かぬ。"
+
+places:
+  - path: /usr
+    bgm: 水上のダンス
+    children:
+      - name: 立て札
+        icon: board
+        lines:
+          - "（古い立て札だ。真ん中から割れていて、ほとんど読めない。）"
+          - "「迷いの森 ― ここより先、道は……」"
+          - "（その先は、割れて失われている。）"
+
+      - name: リス
+        mark: "!talked_squirrel"
+        set: [talked_squirrel]
+        lines:
+          - "リス: わっ、人間だ！ めずらしいね。"
+          - "リス: 森を抜けたいの？ それなら、森の精霊さまに聞くといいよ。"
+          - "{name}: 森の精霊さま？"
+          - "リス: 精霊さまは、大きな切り株のあたりにいるんだ。"
+          - "リス: でもね、見ようとしない人には見えないんだって。ふしぎでしょ？"
+        variants:
+          - if: kodama_joined
+            lines: ["リス: あっ、精霊さまといっしょだ！ いってらっしゃーい！"]
+          - if: talked_squirrel
+            lines:
+              - "リス: 見ようとしない人には見えない……ってことは、ふつうに見ただけじゃ、見えないってことかなあ？"
+
+      - name: 茂み
+        icon: bush
+        onEnter:
+          - once: entered_bush
+            lines: ["（背の高い草をかきわけると、小さな茂みが続いている。）"]
+        children:
+          - name: 茂みの奥
+            icon: bush
+            children:
+              - name: 小さな茂み
+                icon: bush
+                onEnter:
+                  - once: entered_small_bush
+                    lines:
+                      - "（行き止まりだ。）"
+                      - "（ガサッ――小さな影が、あわてて逃げていった。）"
+                children:
+                  - name: 木の実
+                    icon: item
+                    lines:
+                      - "（赤い木の実がなっている。ひとつ食べてみた。）"
+                      - "{name}: ……すっぱい！"
+                  - name: 道しるべ_西
+                    icon: board
+                    seen: found_sign_w
+                    mark: "told_signs & found_sign_w & !sign_w"
+                    set: [sign_w]
+                    lines:
+                      - "（木の実のあいだに、板きれがはさまっている。小さな歯のあとがついている。）"
+                      - "【道しるべ・西のかけら】"
+                      - "「門のむこう」"
+                      - "{name}: ……リスが、巣に運んじゃったのかな。"
+
+      - name: 倒木
+        icon: log
+        onEnter:
+          - once: entered_log
+            lines: ["（大きな木が倒れている。幹の中は、空洞になっているようだ。）"]
+        children:
+          - name: うろ
+            icon: hole
+            onEnter:
+              - once: entered_hollow
+                lines: ["（倒木のうろの中は、ひんやりと暗い。枯れ葉が吹きだまっている。）"]
+            children:
+              - name: 枯れ葉の山
+                icon: bush
+                children:
+                  - name: 鈴
+                    icon: item
+                    visibleIf: "!got_bell"
+                    set: [got_bell]
+                    learn: ["cd -"]
+                    lines:
+                      - "（枯れ葉の中で、小さな銀の鈴が光っている。）"
+                      - "{name}: あった……！ これが、コダマの鈴だ。"
+                      - "（鈴を拾いあげると、チリン、と小さく鳴った。）"
+                      - "（遠くの切り株のほうから、かすかにコダマの声が届く。）"
+                      - "コダマ: ……その音は、われの鈴だな。よく見つけてくれた。"
+                      - "コダマ: 来た場所へ戻るなら、`cd -` と唱えるがよい。さっきまでいた場所へ、ひと息に戻れる。"
+                      - "コダマ: `cd ..` は「ひとつ上」。`cd -` は「さっきいた場所」。……似ておるが、ちがう言葉だ。"
+                  - name: どんぐり
+                    icon: item
+                    lines: ["（まるいどんぐりが、ひとつ落ちている。）"]
+
+      - name: 苔の道
+        icon: moss
+        onEnter:
+          - once: moss_1
+            lines: ["（苔むした細い道が、奥へ続いている。）"]
+        children:
+          - name: 苔の道
+            icon: moss
+            onEnter:
+              - once: moss_2
+                lines: ["（……また、苔の道だ。）"]
+            children:
+              - name: 苔の道
+                icon: moss
+                onEnter:
+                  - once: moss_3
+                    lines:
+                      - "（……さっきも、同じ景色を見た気がする。）"
+                      - "{name}: あれ……？ いま、どこにいるんだっけ……。"
+                children:
+                  - name: 苔の道
+                    icon: moss
+                    onEnter:
+                      - once: moss_4
+                        lines:
+                          - "（同じ景色ばかりだ。自分がどこにいるのか、わからなくなってきた。）"
+                          - "（足もとに、紙切れが落ちている。）"
+                    children:
+                      - name: 迷子のメモ
+                        icon: item
+                        lines:
+                          - "（古い紙切れだ。震える字で書いてある。）"
+                          - "「迷ったら `pwd` と唱えよ。いまいる場所が、/ から順に分かる。」"
+                          - "「戻るときは `cd ..`。ひとつずつ、来た道を戻れる。」"
+                          - "「……わしは、それで帰れた。」"
+
+      - name: 大きな切り株
+        icon: stump
+        onEnter:
+          - once: entered_stump
+            lines:
+              - "（森の真ん中に、見上げるほど大きな切り株がある。）"
+              - "（……誰かに、見られているような気がする。）"
+        children:
+          - name: フクロウ
+            # コダマを見つける（ls -a）までは、フクロウが手がかりをくれる
+            mark: "talked_squirrel & !met_kodama & !seen_kodama"
+            set: [talked_owl]
+            lines:
+              - "フクロウ: ホウ……。人の子が、こんな森の奥まで。"
+              - "フクロウ: 探し物かね？ この森ではな、目に見えるものだけを信じてはいかんよ。ホウ。"
+              - "{name}: 目に見えるもの、だけ……？"
+              - "フクロウ: わしは高い枝から、森をのぞいて暮らしておる。森は広い。入る前に、のぞいてから進むとよい。"
+              - "フクロウ: `ls` のうしろに場所を書けば、入らずとも中が見える。……ここからなら `ls /usr/霧の谷` じゃな。ホウ。"
+            variants:
+              - if: kodama_joined
+                lines: ["フクロウ: ホウ……精霊どのが森を出るとは。長生きはするものじゃ。"]
+              # 森の精を探しているのに見つからないときの手がかり。ls -a は第0章で習っているので、「すべて（-a）」を見ると言うだけにする
+              - if: "talked_owl & talked_squirrel & !met_kodama"
+                lines:
+                  - "フクロウ: 精霊どのなら、この切り株のどこかにおられるよ。ホウ。"
+                  - "フクロウ: ただ、あの方は人前に姿を出さぬ。ふつうに見渡しただけでは、見えんじゃろうな。"
+                  - "フクロウ: 隠れたものまで「すべて」見ようとする者にだけ、あの方は姿を見せるのじゃ。ホウ。"
+              # 精霊を探しているときは、精霊の話だけをする（のぞき方の話は、精霊を探していないときの会話）
+              - if: "talked_squirrel & !met_kodama"
+                set: [talked_owl]
+                lines:
+                  - "フクロウ: ホウ……。人の子が、こんな森の奥まで。"
+                  - "フクロウ: 探し物かね？ ……ほう、精霊どのを。それなら、この切り株のどこかにおられるよ。"
+                  - "{name}: えっ、ここに？ でも、どこにも……。"
+                  - "フクロウ: ただ、あの方は人前に姿を出さぬ。ふつうに見渡しただけでは、見えんじゃろうな。"
+                  - "フクロウ: この森ではな、目に見えるものだけを信じてはいかん。隠れたものまで「すべて」見ようとする者にだけ、あの方は姿を見せるのじゃ。ホウ。"
+              - if: "talked_owl & !met_kodama"
+                lines:
+                  - "フクロウ: 入る前に、のぞく。`ls` のうしろに場所を書くのじゃ。ホウ。"
+              - if: talked_owl
+                lines:
+                  - "フクロウ: 精霊どのに、探す言葉を授かったか。ホウ。"
+                  - "フクロウ: その言葉は、唱えた場所から下しか見えぬ。高いところから見下ろすように、唱えなさい。"
+
+          # find . の練習場所。切り株の下だけを探せば見つかる
+          - name: 根っこ
+            icon: log
+            onEnter:
+              - once: entered_roots
+                lines: ["（太い根が、地面の下へ何本ものびている。）"]
+            children:
+              - name: 細い根
+                icon: log
+                children:
+                  - name: 小石
+                    icon: item
+                    lines: ["（根にからまった、まるい小石だ。）"]
+              - name: 根の奥
+                icon: hole
+                children:
+                  - name: 土のくぼみ
+                    icon: hole
+                    children:
+                      - name: 首飾り
+                        icon: item
+                        seen: found_necklace
+                        mark: "returned_bell & found_necklace & !got_necklace"
+                        set: [got_necklace]
+                        lines:
+                          - "（どんぐりを細いつるでつないだ、小さな首飾りだ。）"
+                          - "（首にかけると、ふわりと森の匂いがした。）"
+                          - "{name}: ……切り株の下だけ探したら、ちゃんと見つかった。"
+                        variants:
+                          - if: got_necklace
+                            lines: ["（コダマにもらった首飾り。森の匂いがする。）"]
+          - name: .コダマ
+            visibleIf: "!kodama_joined"
+            seen: seen_kodama
+            mark: "(talked_squirrel & !met_kodama) | (got_bell & !returned_bell) | (got_necklace & !told_signs)"
+            set: [met_kodama]
+            learn: [find, "find -name"]
+            lines:
+              - "（森の奥から、こだまのような声が響いてきた。）"
+              - "コダマ: ……ふむ。人の子か。久しく、見なかったな。"
+              - "コダマ: われはコダマ。この森に棲む、古い木霊よ。"
+              - "コダマ: われの姿が見えるとは。……目に見えるものだけが、すべてではないと、おまえはもう知っているようだな。"
+              - "{name}: あの……森を抜ける道を、探しているんです。"
+              - "コダマ: 道か。……教えてやりたいが、われも困っておってな。"
+              - "コダマ: 三日前、強い風にさらわれて、尾の鈴を失くした。あれがないと、森の道がうまく見えぬのだ。"
+              - "コダマ: 鈴を見つけてくれたら、出口の道を教えよう。"
+              - "{name}: でも、こんなに広い森で、どうやって……。"
+              - "コダマ: 探し物があるなら、`find` と唱えるがよい。"
+              - "コダマ: `find 場所 -name 名前`。……書いた場所の中を、奥の奥まで探してくれる言葉だ。"
+              - "{name}: 奥の奥まで……。"
+              - "コダマ: ただし、探すのは書いた場所の中だけ。鈴は、森のどこかにある。"
+              - "コダマ: 森じゅうを探すなら、場所には森の入口――`/usr` と書くのだ。`find /usr -name 鈴`。……ためしてみよ。"
+            variants:
+              # 1回目は * のことだけ。もう一度話しかけると、打つ言葉まで教えてくれる
+              - if: told_signs
+                lines:
+                  - "コダマ: 道しるべは三枚。名は、みな「道しるべ」で始まる。"
+                  - "コダマ: 森じゅうから探すのだから、場所は森の入口だ。`find /usr -name \"道しるべ*\"` と唱えてみよ。"
+                  - "コダマ: 見つかったら、出てきた「/usr/……」の道のりを、そのまま `cat` のうしろに書けばよい。"
+              - if: got_necklace
+                set: [told_signs]
+                learn: ["find *"]
+                lines:
+                  - "{name}: コダマ、首飾り、見つけたよ！"
+                  - "コダマ: おお、見つかったか。……よく似合っておる。"
+                  - "コダマ: その首飾りには、森の加護が宿っておる。この先の旅で、きっとおまえを災いから守ってくれよう。"
+                  - "{name}: 森の加護……。ありがとう、大事にするね。"
+                  - "コダマ: それから、約束だ。出口の道しるべは、三つに割れて森に散った。"
+                  - "{name}: 三つに……！？"
+                  - "コダマ: 名は、みな「道しるべ」で始まる。名前の続きがわからぬときは、うしろに `*` をつけるがよい。"
+                  - "コダマ: `*` は「なんでもよい」のしるし。`\"道しるべ*\"` と書けば、「道しるべ」で始まるものが、みな見つかる。"
+                  - "{name}: `\"` で、はさむの？"
+                  - "コダマ: うむ。`*` を使うときは、名前を `\"` でくるんでおくのが作法だ。くるまずに唱えると、`*` が言葉の途中で、いまいる場所の名前に化けてしまうことがある。"
+                  - "コダマ: ……どこから探すかは、おまえが考えてみよ。"
+              - if: returned_bell
+                lines:
+                  - "コダマ: 首飾りは、この切り株の根の奥だ。"
+                  - "コダマ: 切り株の中だけ探せば足りる。切り株で `find . -name 首飾り`、だ。"
+              - if: got_bell
+                set: [returned_bell]
+                lines:
+                  - "{name}: コダマ、鈴を見つけたよ！"
+                  - "コダマ: おお……それは、まさしく。"
+                  - "（コダマの尾に、鈴を結びつけると――）"
+                effect: bell
+                after:
+                  - "（チリーン……と、澄んだ音が森じゅうに響きわたった。）"
+                  - "コダマ: ……ありがとう、人の子よ。これで、森の道がまた見える。"
+                  - "コダマ: 鈴を探すとき、`find /usr` と書いたな。あれは「森の入口から下を、ぜんぶ」という意味だ。"
+                  - "コダマ: 「いまいる場所から下」だけをまとめて探すなら、場所には `.` と書けばよい。`.` は「ここ」のことだ。"
+                  - "{name}: ここから下だけ、か……。"
+                  - "コダマ: 鈴の礼に、われの宝の「首飾り」をやろう。"
+                  - "{name}: 首飾り……？"
+                  - "コダマ: この切り株の根の奥に、しまってある。……奥のどこだったかな。"
+                  - "コダマ: 切り株の中だけ探せば足りるのだから、森じゅうを探すまでもない。切り株で `find . -name 首飾り`、だ。"
+                  - "コダマ: 見つかったら、わざわざそこまで歩いてゆかずともよい。`find` が見せてくれた道のりを、そのまま `cat` のうしろに書けば、ここにいながら読めるのだ。"
+                  - "{name}: わかった！ 探してみるよ！"
+              - if: met_kodama
+                lines:
+                  - "コダマ: 鈴は、森のどこかにあるはずだ。"
+                  - "コダマ: 森じゅうを探すなら、森の入口から。`find /usr -name 鈴` だ。"
+
+      - name: 小川
+        icon: stream
+        onEnter:
+          - once: entered_stream
+            lines:
+              - "（さらさらと小川が流れている。水面が、きらきら光っている。）"
+              - "{name}: ……村の井戸とは、ぜんぜん違う。"
+        children:
+          - name: 野営のあと
+            icon: camp
+            onEnter:
+              - once: entered_camp
+                lines: ["（たき火のあとがある。誰かが、ここで夜を明かしたようだ。）"]
+            children:
+              - name: 道しるべ_北
+                icon: board
+                seen: found_sign_n
+                mark: "told_signs & found_sign_n & !sign_n"
+                set: [sign_n]
+                lines:
+                  - "【道しるべ・北のかけら】"
+                  - "「苔むした」"
+              - name: 置き手紙
+                icon: item
+                lines:
+                  - "（たき火のあとのそばに、石で押さえた手紙がある。）"
+                  - "「森を抜ける者へ。」"
+                  - "「探し物は、見える場所だけにあるとは限らない。」"
+                  - "「……いつか、この森を抜けてくる者がいるのなら。どうか、あの村を頼む。 ― S」"
+                  - "{name}: ……S？ あの村って……チルダ村のこと……？"
+              - name: 古い地図
+                icon: item
+                lines:
+                  - "（色あせた地図だ。森の先に、大きな沼が描かれている。）"
+                  - "（沼の上には、細い字で「もつれ沼」と書いてある。）"
+          - name: 水辺
+            icon: stream
+            children:
+              - name: 道しるべ_東
+                icon: board
+                seen: found_sign_e
+                mark: "told_signs & found_sign_e & !sign_e"
+                set: [sign_e]
+                lines:
+                  - "【道しるべ・東のかけら】"
+                  - "「出口は」"
+              - name: 丸い石
+                icon: stone
+                lines: ["（水に洗われて、つるつるになった石だ。）"]
+
+      - name: 霧の谷
+        icon: fog
+        onEnter:
+          - once: entered_fog
+            lines: ["（白い霧が立ちこめていて、先がよく見えない。）"]
+        children:
+          - name: 門番の日記
+            icon: item
+            lines:
+              - "（古い日記だ。）"
+              - "「今日も門の番をした。誰も来なかった。」"
+              - "「……わしが番をするまでもない。この深い霧が、門を隠してくれる。」"
+          - name: 門の絵
+            icon: item
+            lines: ["（苔むした門の絵だ。……よく描けているが、これは絵であって、門ではない。）"]
+          # 深い霧は迷路。似た名前の分かれ道と行き止まりが続き、find -type d で探さないと門にたどり着きにくい。
+          # 迷路の場所の名前には「門」の字を使わない（*門* で門だけが見つかるように）
+          - name: 深い霧
+            icon: fog
+            onEnter:
+              - once: entered_deep_fog
+                lines:
+                  - "（霧がいっそう濃くなった。自分の手も、ぼんやりとしか見えない。）"
+                  - "（道が、いくつにも分かれている。）"
+            children:
+              - name: 白い霧
+                icon: fog
+                children:
+                  - name: 白い霧の奥
+                    icon: fog
+                    onEnter:
+                      - once: fog_dead_1
+                        lines: ["（行き止まりだ。まわりは真っ白で、何も見えない。）"]
+                    children: []
+                  - name: 小さな沢
+                    icon: stream
+                    children:
+                      - name: 冷たい水
+                        icon: item
+                        lines: ["（手ですくって飲んだ。……つめたい。）"]
+              - name: 灰色の霧
+                icon: fog
+                children:
+                  - name: 霧の小道
+                    icon: fog
+                    children:
+                      - name: 霧の小道
+                        icon: fog
+                        onEnter:
+                          - once: fog_dead_2
+                            lines:
+                              - "（……また、霧の小道だ。）"
+                              - "{name}: さっきも、同じ名前の道を通った気がする……。"
+                        children: []
+                      - name: 崖の上
+                        icon: fog
+                        onEnter:
+                          - once: fog_cliff_top
+                            lines:
+                              - "（崖の上に出た。下は霧にしずんで、何も見えない。）"
+                              - "{name}: ……下に、何かありそうなのに。ここからは降りられない。"
+                        children: []
+                  - name: 倒れた柱
+                    icon: stone
+                    children:
+                      - name: 石の柱
+                        icon: stone
+                        lines: ["（苔むした石の柱が倒れている。昔は、何かの入り口だったのかもしれない。）"]
+              - name: 濃い霧
+                icon: fog
+                children:
+                  - name: 霧の小道
+                    icon: fog
+                    children:
+                      - name: 崖の下
+                        icon: fog
+                        onEnter:
+                          - once: fog_cliff_bottom
+                            lines: ["（崖の下に出た。岩が、ごろごろと転がっている。）"]
+                        children:
+                          - name: 古いつり橋
+                            icon: fog
+                            onEnter:
+                              - once: fog_dead_3
+                                lines: ["（つり橋は、途中で切れて霧の中に消えている。渡れそうにない。）"]
+                            children: []
+                          - name: 岩かげ
+                            icon: stone
+                            children:
+                              - name: 苔むした門
+                                icon: gate
+                                gate:
+                                  if: "!sign_e | !sign_n | !sign_w"
+                                  lines:
+                                    - "（霧が深くて、先へ進めない。）"
+                                    - "（……道しるべが、何か教えてくれるかもしれない。）"
+                                onEnter:
+                                  - once: ch1_clear
+                                    set: [kodama_joined]
+                                    lines:
+                                      - "（苔におおわれた、古い石の門。くぐると、森の風が背中を押した。）"
+                                      - "（チリーン……）"
+                                      - "コダマ: ……来たか、人の子よ。"
+                                      - "{name}: コダマ！ 待っててくれたんだね。"
+                                      - "コダマ: 見送りくらいは、させてくれ。……ふしぎなものだな。おまえの目は、前にこの森を通った人の子に、よく似ておる。"
+                                      - "コダマ: 杖をついた、白髪の男だった。……スドウ、と名乗っていたな。"
+                                      - "{name}: スドウ……！ 会ったことがあるの？"
+                                      - "コダマ: 遠い昔のことよ。この門を教えてやったのも、われだった。"
+                                      - "{name}: {me}、その人を探してるんだ。村の時間が止まっちゃって……スドウに会えば、元に戻せるかもしれないって。"
+                                      - "コダマ: ……そうであったか。止まった村、か。"
+                                      - "コダマ: ならば、われも行こう。スドウの顔を知る者がいたほうが、おまえも心強かろう。"
+                                      - "{name}: いいの……？ 森は？"
+                                      - "コダマ: 鈴が戻ったゆえ、もう迷いはせぬ。それに……この森の外を、久しく見ていなかった。"
+                                      - "コダマ: さあ、行こう。スドウのもとへの道は、まだ長いぞ。"
+                                      - "[コダマが仲間になった。どこにいても `cat コダマ` で話せる。ヒントもコダマが教えてくれる。]"
+                                    effect: chapterEnd
+                                    # 門をくぐると、沼の入口へ出る（第2章の始まり）
+                                    moveTo: /lib
+                                children: []
+                  - name: ぬかるみ
+                    icon: fog
+                    onEnter:
+                      - once: fog_dead_4
+                        lines: ["（足がずぶずぶと沈む。これ以上は進めない。）"]
+                    children: []
+              - name: 冷たい霧
+                icon: fog
+                children:
+                  - name: 霧の底
+                    icon: fog
+                    onEnter:
+                      - once: fog_dead_5
+                        lines: ["（霧が足もとにたまって、まるで雲の上を歩いているようだ。……行き止まりだ。）"]
+                    children: []
+                  - name: 迷いの石
+                    icon: stone
+                    children:
+                      - name: 石に刻まれた文字
+                        icon: stone
+                        lines:
+                          - "（大きな石に、文字が刻まれている。）"
+                          - "「ここまで来た者は、みな引き返した。」"
+                          - "「霧の中を歩きまわるより、探す言葉を唱えるがよい。」"

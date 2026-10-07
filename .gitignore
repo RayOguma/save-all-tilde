@@ -1,0 +1,5 @@
+node_modules/
+dist/
+
+# 続編の案は手元だけに置く（公開リポジトリには入れない）
+docs/sequel.md

@@ -1,0 +1,609 @@
+# 第9章｜賢者の庵 — 鍵束の力と、守り人の目ざめ（sudo・systemctl ＋総復習）
+#
+# 書き方は ch0〜ch8.yaml の先頭を参照。この章で増えたもの:
+#   sudo       sudo コマンド で、鍵束の力（root）で唱える。どの鍵も開いている。スドウに資格をもらうまでは「資格がない」
+#   services   systemctl start 名前（sudo がいる）・systemctl status 名前。activeIf の間は動いている。
+#              onStart の、条件が合った最初のイベント（exists なども使える）
+#   on: "*"    どのコマンドのあとでも（三つの試練を越えたか、など）
+#   noUnlink   リンクに書くと、unlink で抜こうとしても抜かずに、このせりふを出す
+#   人や物の places  後の章から、前の章の人や物にせりふを足せる（variants は前に足され、後の章のものが優先）
+#   killBlockedIf / killBlocked  動いている者（プロセス）に、kill を唱えさせない条件とせりふ
+#   chapter.ending  最後の章。クリアしたら、章の終わりの画面のかわりにエンディング（挿絵とスタッフロール）
+#   endingTitles    エンディングの最後に出す、結末の名前
+#
+# 物語の流れ（フラグの順）:
+#   read_trials（試練の碑）→ trial1_done（find で三本の鍵）・trial2_done（chmod で錆びた箱、tar で巻物）・
+#   trial3_done（ls -l・file で惑わしの札を見破り、unlink）→ trials_done（庵の扉が開く）
+#   → met_sudo → talked_sudo（sudo・systemctl を覚える）→ チルダ村へ
+#   → blueprint_moved（sudo mv で設計図の包みを守り人のそばへ）→ blueprint_ready（tar -xzf）
+#   → morihito_revived（sudo systemctl start モリビト。画面が真っ白になり、村に色と音が戻る）
+#   → reunion_done（お母さんと再会。コダマの声がして、玄関へ）
+#   → 玄関で ls（スドウ。鍵束を託される）・ls -a（.コダマ。お別れ）= sudo_farewell・kodama_farewell → ch9_clear → エンディング
+#   → エンディングの最後に、スドウのせりふ（epilogue）。見守り役としての物語がつづくことをにおわせる
+
+chapter: { no: 9, title: 賢者の庵, startIf: ch8_clear, startAt: /root, ending: true }
+
+# この章をクリアすると手に入るもの（「章を選ぶ」の決まり。最後の章なので、つづきの章はまだない）
+clear:
+  flags: [read_trials, key1, key2, key3, trial1_done, box_opened, trial2_done, trial3_done, trials_done, met_sudo, talked_sudo,
+          back_home, at_hole, blueprint_moved, blueprint_ready, morihito_revived, reunion_done, sudo_farewell, kodama_farewell,
+          ch9_clear]
+  learned: [sudo, systemctl, "systemctl start", "systemctl status"]
+  discovered: [/root, /root/庵]
+  ops:
+    - { op: unlink, path: /root/道しるべの辻/西の道しるべ }
+    - { op: unlink, path: /root/道しるべの辻/北の道しるべ }
+    - { op: mv, from: /home/チルダ村/かばん/設計図.tar.gz, to: /home/チルダ村/村はずれ/柵の裏/.抜け穴/設計図.tar.gz }
+    - { op: untar, path: /home/チルダ村/村はずれ/柵の裏/.抜け穴/設計図.tar.gz, to: /home/チルダ村/村はずれ/柵の裏/.抜け穴 }
+  perms:
+    /root/錆びた箱: { mode: "rwx------" }
+    /root/庵: { mode: "rwxr-xr-x" }
+  history: [ls, cat 試練の碑, find /root -name "*鍵*", chmod u+rwx 錆びた箱, cd 錆びた箱, tar -xzf 封じられた巻物.tar.gz,
+            cat 巻物, cd /root/道しるべの辻, ls -l, unlink 西の道しるべ, unlink 北の道しるべ, cd /root/庵, cat スドウ,
+            cd ~/村はずれ/柵の裏/.抜け穴, sudo mv ~/かばん/設計図.tar.gz ., tar -xzf 設計図.tar.gz,
+            sudo systemctl start モリビト, cd ~/きみの家/リビング, cat お母さん, cd ../玄関, ls, cat スドウ, ls -a, cat .コダマ]
+
+characters:
+  スドウ: { sprite: sudo, color: "#e8d8a8", voice: 280 }
+
+# 結末の名前（エンディングの最後の挿絵に添える）
+endingTitles:
+  - title: "― 新しい見守り役 ―"
+
+# エンディングの最後（Thank you for playing のあと）、真っ暗な中に出すせりふ。
+# 本編では明かしていない「石碑の警告を削ったのは、だれか」を残して、見守り役としての物語がつづくことをにおわせる
+epilogue:
+  - "スドウ: ……ひとつ、言い忘れておった。"
+  - "スドウ: 村はずれの、あの石碑。警告を削り取ったのは、わしではない。"
+  - "スドウ: 鍵束を持つ者のもとには、これから、いろんな厄介ごとが舞いこんでくるじゃろう。"
+  - "スドウ: 見守り役の仕事は、ここからが本番じゃぞ。"
+
+allow:
+  # 設計図の包みを、守り人のそば（抜け穴の中）に置く。運ぶ（mv）のがふつうだが、写しても（cp）よい
+  - cmd: cp
+    from: ~/かばん/設計図.tar.gz
+    to: ~/村はずれ/柵の裏/.抜け穴/設計図.tar.gz
+    if: "talked_sudo & !blueprint_moved"
+    wrong:
+      - "コダマ: 設計図は、守り人のそば……抜け穴の中へ運ぶのじゃ。"
+  - cmd: mv
+    from: ~/かばん/設計図.tar.gz
+    to: ~/村はずれ/柵の裏/.抜け穴/設計図.tar.gz
+    if: "talked_sudo & !blueprint_moved"
+    wrong:
+      - "コダマ: 設計図は、守り人のそば……抜け穴の中へ運ぶのじゃ。"
+
+# 守り人（モリビト）。systemctl で動かす・確かめる
+services:
+  - name: モリビト
+    desc: 守り人（世界でいちばん最初に目をさまし、いちばん最後まで眠らない者）
+    activeIf: "!morihito_killed | morihito_revived"
+    since: "7月12日 09:00"
+    onStart:
+      - if: "!blueprint_ready"
+        lines:
+          - "（モリビトは、かすかに震えたが……動かない。）"
+          - "コダマ: 守り人は、まだ自分の姿を思い出せぬようじゃ。そばで、設計図をほどいてやらねば。"
+      - once: morihito_revived
+        lines:
+          - "（鍵束の力が、言葉に宿った。）"
+          - "（トクン……。）"
+          - "（トクン……トクン……。止まっていた鼓動が、ふたたび打ちはじめる。）"
+        effect: revive
+        after:
+          - "<dawn>"
+          - "[モリビトが、動きだした。]"
+          - "（抜け穴の外から、風が吹きこんでくる。……鳥の声。水の音。人の話し声。）"
+          - "（チルダ村に、色が戻っていた。）"
+          - "コダマ: ……やったな、人の子よ。"
+          - "{name}: うん……！ うん……！"
+          - "（ふり返ると、杖をついたスドウが、抜け穴の入口に立っていた。）"
+          - "スドウ: よくやった。……お前さんの手で、守り人は目をさました。"
+          - "{name}: スドウさん……！ ありがとう。スドウさんが教えてくれたから……！"
+          - "スドウ: 礼は、あとでよい。さあ、家族のもとへ帰りなさい。待っておる者がおろう。"
+
+intro:
+  - "（書庫の屋根から、空へ続く長い階段を登っていく。）"
+  - "（雲を抜けると……金色の光に満ちた、静かな庭に出た。）"
+  - "（庭の奥に、わらぶきの小さな庵が見える。）"
+  - "コダマ: ……ここが、賢者の庵。スドウは、この先におる。"
+guide:
+  - "[まずは `ls` で、あたりを見渡してみよう。]"
+
+objectives:
+  - if: ch9_clear
+    text: "おわり。遊んでくれてありがとう！"
+  - if: reunion_done
+    text: "玄関へ行ってみよう（だれかの気配がする）"
+  - if: morihito_revived
+    text: "家族のもとへ帰ろう"
+  - if: blueprint_ready
+    text: "鍵束の力で、モリビトを動かそう（`sudo systemctl start モリビト`）"
+  - if: blueprint_moved
+    text: "守り人のそばで、設計図の包みをほどこう"
+  - if: talked_sudo
+    text: "チルダ村へ帰り、かばんの設計図の包みを、モリビトのそばに置こう"
+  - if: met_sudo
+    text: "スドウと話そう"
+  - if: trials_done
+    text: "庵へ入ろう"
+  - if: "read_trials & !trial1_done"
+    text: "一の試練: 雲の庭に隠された、三本の鍵を探そう"
+  - if: "read_trials & !trial2_done"
+    text: "二の試練: 錆びた箱を開け、封じられた巻物をほどこう"
+  - if: "read_trials & !trial3_done"
+    text: "三の試練: 惑わしの札を抜き、まことの道しるべだけを残そう"
+  - text: "雲の上の庭を調べよう"
+
+hints:
+  - if: ch9_clear
+    steps: ["おしまい。遊んでくれてありがとう！"]
+  - if: reunion_done
+    steps:
+      - "玄関から、だれかの気配がする。コダマの声もした。"
+      - "玄関で見渡してみよう。隠れている者もいるかもしれない。"
+      - "`cd ../玄関` → `ls` → `cat スドウ` → `ls -a` → `cat .コダマ`"
+  - if: morihito_revived
+    steps:
+      - "家族のもとへ帰ろう。"
+      - "きみの家のリビングに、お母さんがいる。"
+      - "`cd ~/きみの家/リビング` → `cat お母さん`"
+  - if: blueprint_ready
+    steps:
+      - "鍵束の力で、モリビトを動かそう。"
+      - "言葉の前に `sudo`。動かすのは `systemctl start`。"
+      - "`sudo systemctl start モリビト`"
+  - if: blueprint_moved
+    steps:
+      - "守り人のそばで、設計図の包みをほどこう。"
+      - "包みをほどくのは、山道で覚えた言葉。"
+      - "`tar -xzf 設計図.tar.gz`"
+  - if: talked_sudo
+    steps:
+      - "チルダ村へ帰り、かばんの設計図の包みを、モリビトのそば（抜け穴の中）に置こう。"
+      - "物を運ぶ言葉は、市場町で覚えた。抜け穴はスドウの場所なので、鍵束の力（`sudo`）もいる。"
+      - "`cd ~/村はずれ/柵の裏/.抜け穴` → `sudo mv ~/かばん/設計図.tar.gz .`"
+  - if: met_sudo
+    steps:
+      - "スドウと話そう。"
+      - "話しかけるのは `cat`。"
+      - "`cat スドウ`"
+  - if: trials_done
+    steps:
+      - "庵の扉が開いた。"
+      - "まことの道しるべが、庵を指している。"
+      - "`cd /root/庵`"
+  - if: "read_trials & !trial1_done"
+    steps:
+      - "雲の庭のどこかに、鍵が三本隠されている。見えない場所にも。"
+      - "探しものは、迷いの森で覚えた言葉。隠れた場所も、奥まで探してくれる。"
+      - "`find /root -name \"*鍵*\"`"
+  - if: "read_trials & !trial2_done"
+    steps:
+      - "錆びた箱を開けて、中の巻物をほどこう。箱は、たどり着いた者（きみ）の物。"
+      - "鍵のかけ方を変える言葉（ムラガレ）と、包みをほどく言葉（山道）。"
+      - "`chmod u+rwx 錆びた箱` → `cd 錆びた箱` → `tar -xzf 封じられた巻物.tar.gz` → `cat 巻物`"
+  - if: "read_trials & !trial3_done"
+    steps:
+      - "道しるべの辻で、どこも指さない惑わしの札を見破ろう。"
+      - "札の正体と行き先を見る言葉（もつれ沼）で調べて、札を抜く言葉で抜く。"
+      - "`cd /root/道しるべの辻` → `ls -l` → `unlink 西の道しるべ` → `unlink 北の道しるべ`"
+  - steps:
+      - "雲の上の庭。まずは、まわりを見よう。"
+      - "見渡すのは `ls`、読むのは `cat`。"
+      - "`ls` → `cat 試練の碑`"
+
+events:
+  # 一の試練: 三本の鍵（find のおさらい）
+  - on: find
+    if: "key1 & key2 & key3"
+    once: trial1_done
+    lines: &keys
+      - "{name}: 三本の鍵、ぜんぶ見つけた！"
+      - "（どこか遠くで、カチャリ、と錠のはずれる音がした。）"
+      - "<unlock>"
+  - on: ls
+    if: "key1 & key2 & key3"
+    once: trial1_done
+    lines: *keys
+  # 三の試練: 惑わしの札を抜いた（ls -l・file・unlink のおさらい）
+  - on: unlink
+    missing: [/root/道しるべの辻/西の道しるべ, /root/道しるべの辻/北の道しるべ]
+    once: trial3_done
+    lines:
+      - "（惑わしの札が消えると、辻に残った東の道しるべが、ほのかに光った。）"
+      - "<unlock>"
+  # 三つの試練を越えた。庵の扉が開く
+  - on: "*"
+    if: "trial1_done & trial2_done & trial3_done"
+    once: trials_done
+    chmod: { path: /root/庵, mode: "rwxr-xr-x" }
+    lines:
+      - "（ゴゴゴ……。雲の向こうで、庵の扉が、ゆっくりと開いていく。）"
+      - "コダマ: 三つの試練を、越えたか。……行こう、人の子。スドウが待っておる。"
+  # 抜け穴で、鍵束の力なしに写そうとした
+  - on: cp
+    at: /home/チルダ村/村はずれ/柵の裏/.抜け穴
+    if: talked_sudo
+    missing: [~/村はずれ/柵の裏/.抜け穴/設計図.tar.gz]
+    lines: &needsudo
+      - "コダマ: ……ここは、スドウの場所じゃ。置くにも、鍵束の力を借りるがよい。言葉の前に、`sudo` じゃ。"
+  - on: mv
+    at: /home/チルダ村/村はずれ/柵の裏/.抜け穴
+    if: talked_sudo
+    missing: [~/村はずれ/柵の裏/.抜け穴/設計図.tar.gz]
+    lines: *needsudo
+  # 設計図の包みを、守り人のそばへ運んだ
+  - on: "*"
+    if: talked_sudo
+    exists: [~/村はずれ/柵の裏/.抜け穴/設計図.tar.gz]
+    once: blueprint_moved
+    lines:
+      - "{name}: 設計図の包み、守り人のそばに置けた。"
+      - "コダマ: あとは、守り人のそばで、ほどいてやるのじゃ。"
+  # 玄関で、スドウとコダマ、両方と最後の話をしたら、エンディングへ
+  - on: "*"
+    if: "sudo_farewell & kodama_farewell"
+    once: ch9_clear
+    lines:
+      - "（玄関の外では、窯の煙が、青い空へ、まっすぐにのぼっていく。）"
+      - "<chapterEnd>"
+  # 設計図をほどいた
+  - on: tar
+    exists: [~/村はずれ/柵の裏/.抜け穴/設計図]
+    once: blueprint_ready
+    lines:
+      - "（包みをほどくと、設計図が広がった。）"
+      - "（……トクン。モリビトの鼓動が、かすかに聞こえた気がする。）"
+      - "コダマ: 守り人が、自分の姿を思い出しはじめておる。……今じゃ、人の子。"
+
+companions:
+  - name: コダマ
+    joinIf: kodama_joined
+    variants:
+      - at: /root
+        lines: ["コダマ: 雲の上は、空気が澄んでおるのう。……スドウは、ずっとここから、世界を見ておったのか。"]
+      - at: /home/チルダ村/きみの家/玄関
+        if: "reunion_done & !kodama_farewell"
+        set: [kodama_farewell]
+        lines: &farewell
+          - "コダマ: ……ふふ。よう見つけたな。"
+          - "{name}: コダマ……！ さっき、{me}の名前を呼んだでしょ。"
+          - "コダマ: 家族との時間を、じゃまするのも野暮じゃと思うてな。"
+          - "コダマ: ……人の子よ。われは、森へ帰る。鈴が戻り、守り人も目をさました。もう、迷う者もおるまい。"
+          - "{name}: ……そっか。……コダマ、ずっといっしょにいてくれて、ありがとう。森で会えて、本当によかった。"
+          - "コダマ: 礼を言うのは、われのほうじゃ。おまえと歩いて、久しぶりに、森の外の景色を見られた。"
+          - "コダマ: われも、ときどき様子を見に来よう。……おまえが、またまちがえぬようにな。"
+          - "{name}: もう、まちがえないよ。……たぶん。"
+
+places:
+  # 第7章の頂上から見えた /root（賢者の庵）に、中身を足す
+  - path: /root
+    icon: hermitage
+    theme: cloudtop
+    bgm: 悠久の空へ
+    children:
+      - name: 試練の碑
+        icon: board
+        mark: "!read_trials"
+        set: [read_trials]
+        text:
+          - "― 庵をたずねる者への、三つの試練 ―"
+          - "一、探せ。雲の庭に隠された、三本の鍵を。"
+          - "二、開けよ。錆びた箱を開け、封じられた巻物をほどけ。"
+          - "三、見破れ。惑わしの札を抜き、まことの道しるべだけを残せ。"
+          - "三つの試練を越えた者にのみ、庵の扉は開く。"
+        lines:
+          - "コダマ: 三つの試練……。どれも、旅の途中で覚えた言葉で越えられそうじゃな。"
+          - "{name}: うん。森で、沼で、ムラガレで、山道で……覚えてきたこと、ぜんぶ使うんだ。"
+      - name: 鍵の形の雲
+        icon: item
+        lines: ["（鍵の形をした、小さな雲だ。……手を伸ばしても、つかめない。）"]
+      - name: 雲の小道
+        icon: path
+        children:
+          - name: 苔むした灯籠
+            icon: stone
+            children:
+              - name: 一本目の鍵
+                icon: key
+                seen: key1
+                lines: ["（灯籠の中に、銀色の鍵が置いてあった。）"]
+      # ls -a でしか見えない、霧の奥
+      - name: .霧の奥
+        icon: fog
+        children:
+          - name: 二本目の鍵
+            icon: key
+            seen: key2
+            lines: ["（霧の中に、金色の鍵が浮かんでいた。）"]
+      - name: 風見の台
+        icon: path
+        children:
+          - name: 鳥の巣
+            icon: bush
+            children:
+              - name: 三本目の鍵
+                icon: key
+                seen: key3
+                lines: ["（鳥の巣の中に、銅色の鍵がまぎれていた。）"]
+      # 二の試練: たどり着いた者（きみ）の物の箱。錆びた錠（鍵がぜんぶ閉まっている）
+      - name: 錆びた箱
+        icon: crate
+        owner: きみ
+        mode: "---------"
+        mark: "read_trials & !trial2_done"
+        deniedLines:
+          - "（箱には、赤く錆びた錠がかかっている。ふたに『この箱は、たどり着いた者のもの』と彫ってある。）"
+        onChmod:
+          - can: x
+            once: box_opened
+            lines:
+              - "（カチャリ。錆びた錠が、外れた。）"
+              - "<unlock>"
+        children:
+          - name: 封じられた巻物.tar.gz
+            icon: package
+            archive:
+              - name: 巻物
+                icon: scroll
+                set: [trial2_done]
+                text:
+                  - "― 二の試練を越えし者へ ―"
+                  - "鍵は、閉ざすためでなく、開けるためにある。"
+                  - "まことの道しるべは、庵の扉を指す。惑わしの札は、どこも指さぬ。"
+                lines:
+                  - "{name}: 惑わしの札は、どこも指さない……三の試練の、手がかりだ。"
+                  - "（どこか遠くで、カチャリ、と錠のはずれる音がした。）"
+                  - "<unlock>"
+      # 三の試練: どこも指さない札（リンク切れ）を抜き、庵を指す札だけを残す
+      - name: 道しるべの辻
+        icon: path
+        mode: "rwxrwxrwx"
+        mark: "read_trials & !trial3_done"
+        children:
+          - name: 東の道しるべ
+            link: /root/庵
+            noUnlink:
+              - "（この道しるべは、庵の扉を指している。……抜いてはならない。）"
+          - name: 西の道しるべ
+            link: /root/消えた橋
+            onBroken:
+              lines: ["（札をたどってみたが、その先には、何もなかった。）"]
+          - name: 北の道しるべ
+            link: /root/崩れた階段
+            onBroken:
+              lines: ["（札をたどってみたが、その先には、何もなかった。）"]
+      # 賢者の庵。三つの試練を越えるまで、扉は閉ざされている
+      - name: 庵
+        icon: hermitage
+        theme: hermitage
+        owner: スドウ
+        mode: "rwx------"
+        mark: "trials_done & !met_sudo"
+        deniedLines:
+          - "（庵の扉は、固く閉ざされている。……試練の碑に、何か書いてあった。）"
+        onEnter:
+          - once: met_sudo
+            lines:
+              - "（障子の向こうに、杖をついた白髪の老人が座っていた。腰には、金色の鍵束。）"
+              - "スドウ: ……来たか。書庫の札を、たどってきたのじゃな。"
+              - "（スドウは、ふと、{name}のとなりの狐に目をとめた。）"
+              - "スドウ: ……おお。これは、迷いの森の精霊どのではないか。"
+              - "（スドウは杖を置き、深々と頭を下げた。）"
+              - "コダマ: 久しいの、スドウ。森の門を教えてやって以来か。"
+              - "スドウ: あのときは、世話になり申した。……まさか、精霊どのが森を出て、人の子と旅をなさるとは。"
+              - "{name}: せ、精霊どの……？ スドウさんが、頭を下げてる……！？"
+              - "スドウ: なんと、知らずに旅をしておったのか。精霊どのは、千年、迷いの森を見守ってこられた主じゃぞ。"
+              - "{name}: コダマって……そんなにすごかったの！？ ずっと、ものしりな、しゃべる狐だと思ってた……。"
+              - "コダマ: ……しゃべる狐で、悪かったの。"
+        children:
+          - name: スドウ
+            owner: スドウ
+            mark: "met_sudo & !talked_sudo"
+            set: [talked_sudo]
+            learn: [sudo, systemctl, "systemctl start", "systemctl status"]
+            lines:
+              - "スドウ: ……座りなさい。長い旅だったろう。"
+              - "{name}: {me}、話さなきゃいけないことがあるんだ。……モリビトを止めたのは、{me}です。村はずれの石碑の言葉を、唱えてしまって……。"
+              - "スドウ: ……知っておるよ。あの朝、世界の時が止まるのを感じた。十年前と、同じように。"
+              - "{name}: 書庫の、隠された記録で読んだよ。スドウさんも、一度モリビトを止めたって。"
+              - "スドウ: ああ。わしは、守り人が村を縛る鎖になっておると思いこんだ。守り人がいなくとも、人は自分の足で立てる、とな。"
+              - "スドウ: ……まちがいじゃった。止まった世界を十日歩いて、ようやく分かった。見えない支えがなければ、人は、窯の火ひとつ灯せん。"
+              - "コダマ: それで、名を消し、姿を隠したのか。"
+              - "スドウ: どんな扉でも開けられる鍵束を、ひとりの人間が持っておるのが、怖くなったのじゃ。わしは、また、まちがえるかもしれん。"
+              - "スドウ: だから、守り人を動かしなおしたとき、守り人の原本に、ひとつ決まりを書き加えた。『作成者の手では、二度と守り人を動かせぬ』……とな。"
+              - "{name}: 自分では、動かせないようにしたの……？"
+              - "スドウ: 気が変わって、また止めたり動かしたり……わしが、思うままに世界をいじれぬように。自分の手を、自分で縛ったのじゃ。"
+              - "スドウ: だから、あの朝、守り人がまた止まったとき……わしには、もう直せなんだ。"
+              - "{name}: そんな……。じゃあ、ほかのだれかが直すしかないの？"
+              - "スドウ: そうじゃ。鍵束の力を、だれかに貸すしかない。……じゃが、だれでもよいわけではない。どんな扉でも開ける力じゃ。まちがった者に渡せば、守り人が止まるより、ひどいことになる。"
+              - "コダマ: ……止めることの重さを、知る者でなければならぬ、ということか。"
+              - "スドウ: うむ。過ちから目をそらさず、自分の足で歩いて、ここまで来る者。……そういう者になら、託せると思うた。"
+              - "スドウ: だから、だれでもたどれるように、道しるべを残した。設計図は山道に、覚え書きは市場町に。そして書庫には、原本の札をな。"
+              - "{name}: ……書庫の札は、わざと残してたんだ。"
+              - "スドウ: うむ。道しるべをたどるうちに、自分の過ちと向き合うことになるように、と。……そして、お前さんは来た。自分の記録から、目をそらさずに。"
+              - "スドウ: 直し方は教えよう。わしの手では、もう動かせぬ。……お前さんの手でやりなさい。"
+              - "（スドウは、腰の鍵束から一本の鍵をはずして、{name}の手にのせた。）"
+              - "スドウ: 鍵束の力を、貸そう。唱えるときは、言葉の前に `sudo` とつける。どんな鍵も開く言葉……わしの名の、もとになった言葉じゃ。"
+              - "{name}: スドウさんの、名前の……。"
+              - "スドウ: ただし、鍵束を使う前に、三つのことを心に刻みなさい。"
+              - "スドウ: 一つ、ほかの人の領分を、尊ぶこと。二つ、唱える前に、よく考えること。三つ……大きな力には、大きな責任がともなうこと。"
+              - "{name}: ……唱える前に、よく考える。"
+              - "スドウ: 守り人を動かす言葉は、`systemctl start モリビト`。鍵束の力がいるから、`sudo systemctl start モリビト` じゃ。"
+              - "スドウ: 動いておるかどうかは、`systemctl status モリビト` で確かめられる。……ただし、守り人は、自分の姿を思い出さねば動けん。そばに設計図を置いて、ほどいてやりなさい。"
+              - "{name}: ……ありがとう、スドウさん。{me}、ちゃんと、やってみる。"
+              - "コダマ: 守り人は、チルダ村の抜け穴の奥じゃな。……帰ろう、人の子。"
+              - "{name}: うん。……チルダ村へ、帰るんだ。"
+            variants:
+              - if: talked_sudo
+                lines: ["スドウ: 守り人は、チルダ村の抜け穴の奥じゃ。そばに設計図を置いて、ほどいてから、`sudo systemctl start モリビト`。"]
+          # 伏線（調べても、本編では何も分からない。くわしくは手元の docs/sequel.md の伏線の表）
+          - name: 湯のみ
+            icon: item
+            lines:
+              - "（ちゃぶ台に、湯のみがふたつ伏せてある。片方は、うっすらとほこりをかぶっている。）"
+              - "{name}: スドウさん、この湯のみ……だれの？"
+              - "スドウ: ……昔の話じゃ。"
+          # 書庫の『守り人の原本』の札が指していた原本（第8章が終わるまでは、まだ見えない。札はリンク切れ）
+          - name: 守り人の原本
+            icon: book
+            owner: スドウ
+            mode: "rw-r--r--"
+            visibleIf: ch8_clear
+            text:
+              - "― 守り人（モリビト）の原本 ―"
+              - "作成者: スドウ"
+              - "守り人は、世界でいちばん最初に目をさまし、いちばん最後まで眠らない者。"
+              - "守り人は、ほかのすべての者の親。親をなくした子を拾い、見えない支えを生み、予定を起こして回す。"
+              - "守り人が止まれば、世界の時も止まる。"
+              - "（十年前、作成者みずから書き加える）作成者の手では、二度と守り人を動かせぬ。"
+              - "守り人を動かすには: そばで設計図をほどき、鍵束の力で `systemctl start` と唱えよ。"
+            lines:
+              - "{name}: これが、書庫の札が指していた原本……。"
+
+  # チルダ村に帰ってきた
+  - path: /home/チルダ村
+    onEnter:
+      - if: "talked_sudo & !morihito_revived"
+        once: back_home
+        lines:
+          - "（なつかしいチルダ村。……でも、色は抜けたまま。だれも、動かない。）"
+          - "{name}: ……ただいま。もうすぐ、元に戻すから。"
+  # 抜け穴は、スドウの場所（書きこむには、鍵束の力がいる）
+  - path: /home/チルダ村/村はずれ/柵の裏/.抜け穴
+    owner: スドウ
+    mark: "talked_sudo & !morihito_revived"
+    onEnter:
+      - if: "talked_sudo & !morihito_revived"
+        once: at_hole
+        lines:
+          - "（抜け穴の奥。止まったモリビトが、静かに横たわっている。）"
+          - "{name}: ……待っててね。いま、動かすから。"
+          - "コダマ: まずは、かばんの設計図の包みを、守り人のそばに置いてやるのじゃ。……ここはスドウの場所。鍵束の力が、いるやもしれぬな。"
+  - path: /home/チルダ村/村はずれ/柵の裏/.抜け穴/.モリビト
+    stoppedIf: "morihito_killed & !morihito_revived"
+    killBlockedIf: morihito_revived
+    killBlocked:
+      - "（……唱えようとして、やめた。唱える前に、よく考える。もう二度と、この言葉を、守り人には向けない。）"
+    variants:
+      - if: morihito_revived
+        lines:
+          - "[実行中のプロセス]"
+          - "（トクン……トクン……。力強い鼓動が聞こえる。）"
+  - path: /home/チルダ村/村はずれ/柵の裏/.抜け穴/古い石碑
+    variants:
+      - if: morihito_revived
+        lines: ["（石碑の文字は、もう光っていない。……唱える前に、よく考える。）"]
+
+  # 色の戻った村の人たち
+  - path: /home/チルダ村/きみの家/リビング/お母さん
+    variants:
+      - if: reunion_done
+        lines: ["お母さん: 焼きたてのパン、あったかいうちにね。……スドウさんも、コダマちゃんも、どうぞ。"]
+      # 再会。そのあと、耳もとでコダマの声がして、玄関へ
+      - if: morihito_revived
+        set: [reunion_done]
+        reveal: [/home/チルダ村/きみの家/玄関]
+        lines:
+          - "お母さん: ……あら？ わたし、うたた寝しちゃってたのかしら。"
+          - "{name}: お母さん……！"
+          - "お母さん: おかえり、{name}。……どうしたの、そんな顔して。まるで、長い旅から帰ってきたみたい。"
+          - "{name}: ……ただいま！"
+          - "（{name}は、お母さんに抱きついた。）"
+          - "お母さん: ふふ、甘えんぼさんね。……ナノちゃんのパン、みんなで食べましょう。"
+          - "（……{name}。）"
+          - "{name}: ……！"
+          - "（コダマの声が、耳もとでした気がする。……玄関のほうからだ。）"
+  - path: /home/チルダ村/きみの家/玄関
+    mark: "reunion_done & !ch9_clear"
+    onEnter:
+      - if: reunion_done
+        once: at_door
+        lines: ["（玄関の戸の向こうに、だれかの気配がする。）"]
+    children:
+      - name: スドウ
+        owner: スドウ
+        visibleIf: reunion_done
+        mark: "reunion_done & !sudo_farewell"
+        set: [sudo_farewell]
+        lines:
+          - "スドウ: ……家族には、会えたかの。"
+          - "{name}: うん。……スドウさん、本当にありがとう。スドウさんが道しるべを残してくれなかったら、{me}、ここまで来られなかった。"
+          - "スドウ: 礼を言うのは、わしのほうじゃ。わしが十年かけてもできなんだことを、お前さんは、やってのけた。"
+          - "スドウ: ……{name}。この鍵束を、お前さんに託したい。"
+          - "{name}: え……{me}に？ でも、{me}は、モリビトを止めたのに……。"
+          - "スドウ: だからこそじゃ。止めることの重さを知る者にしか、この鍵束は預けられん。"
+          - "（スドウは、腰の鍵束をはずして、{name}の手にのせた。……ずしりと、重い。）"
+          - "{name}: ……ありがとう。{me}が、見守る。モリビトも、村も、みんなも。"
+          - "スドウ: ほっほ。十年前のわしより、よほど頼もしい。……今日から、お前さんが、新しい見守り役じゃ。"
+        variants:
+          - if: sudo_farewell
+            lines: ["スドウ: 困ったときは、いつでも庵へ来なさい。……新しい見守り役どの。"]
+      # コダマは、また隠れている（第1章と同じく、ls -a で見つける）
+      - name: .コダマ
+        visibleIf: reunion_done
+        mark: "reunion_done & !kodama_farewell"
+        set: [kodama_farewell]
+        lines: *farewell
+        variants:
+          - if: kodama_farewell
+            lines: ["コダマ: 森へ遊びに来るときは、鈴の音をたどるがよい。"]
+  - path: /home/チルダ村/きみの家/リビング/バッシュ
+    variants:
+      - if: morihito_revived
+        lines:
+          - "バッシュ: ふわぁ……{name}？ なんか、すごく長い夢を見てた気がする。"
+          - "バッシュ: ……おまえ、ちょっと大人びた顔してるな。何かあったのか？"
+  - path: /home/チルダ村/きみの家/リビング/食卓
+    variants:
+      - if: morihito_revived
+        lines: ["（焼きたてのパンが並んでいる。いい匂いだ。）"]
+  - path: /home/チルダ村/きみの家/自分の部屋/窓
+    variants:
+      - if: morihito_revived
+        lines: ["（窓の外に、青い空が広がっている。鳥が、のんびり飛んでいく。）"]
+  - path: /home/チルダ村/掲示板
+    variants:
+      - if: morihito_revived
+        lines: ["「本日も、モリビト様のおかげで、村は静かに回っております。 ― 村長」"]
+  - path: /home/チルダ村/キャット
+    variants:
+      - if: morihito_revived
+        lines:
+          - "キャット: にゃあ。"
+          - "（キャットは、しっぽを立てて、きみの足にすり寄ってきた。）"
+  - path: /home/チルダ村/チョウン爺の家/チョウン爺
+    variants:
+      - if: morihito_revived
+        lines:
+          - "チョウン爺: おお……{name}！ 村の時が、戻ったのか……！ よう、やってくれた。"
+          - "チョウン爺: スドウどのも、帰ってこられたか。……ほっほ、長い留守じゃったのう。"
+  - path: /home/チルダ村/パン屋/ナノ
+    variants:
+      - if: morihito_revived
+        lines:
+          - "ナノ: {name}！ 見て、窯に火が入ったの！ 毎朝6時に、ひとりでに。"
+          - "ナノ: ……やっぱり、モリビトのおかげだったのね。焼きたて、持っていって。"
+  - path: /home/チルダ村/パン屋/焼きたてパン
+    variants:
+      - if: morihito_revived
+        lines: ["（ふかふかの、焼きたてのパンだ。湯気が立っている。）"]
+  - path: /home/チルダ村/井戸端/ヴィム婆
+    variants:
+      - if: morihito_revived
+        lines: ["ヴィム婆: ほら見なさい、わたしのやり方のほうが、ずっと早いんだよ！"]
+  - path: /home/チルダ村/井戸端/イーマ爺
+    variants:
+      - if: morihito_revived
+        lines: ["イーマ爺: いいや、わしのやり方こそ、何でもできるんじゃ！ ……ん？ {name}、帰っておったか。"]
+  - path: /home/チルダ村/井戸端/ピコ
+    variants:
+      - if: morihito_revived
+        lines:
+          - "ピコ: あれ？ ずっと、かくれんぼしてた気がする！"
+          - "ピコ: ……{name}、抜け穴のこと、ないしょだよ？ ……え、もう、みんな知ってる？"
+  - path: /home/チルダ村/井戸端/井戸
+    variants:
+      - if: morihito_revived
+        lines: ["（井戸の水が、きらきらと光っている。）"]

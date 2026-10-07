@@ -1,0 +1,257 @@
+# 📖 コマンド手帳の中身。手帳には、覚えたコマンドだけが載る
+#   summary  ひとことで（入力候補にも出る）
+#   usage    書き方
+#   options  オプション。learned に "ls -a" のように入っているものだけ手帳に出る。short は右の手帳に出す短い説明
+#   veil     until の条件になるまで、正体を伏せて見せる（summary などを差し替える。禁じられた言葉の赤い印も出さない）
+#   real     本物のLinuxでは
+#   system   最初から使える操作系のコマンド（手帳の「そのほか」に載る）
+#   forbidden 禁じられた言葉として赤く載る
+
+commands:
+  - name: ls
+    summary: まわりを見渡す
+    usage: ls [場所]
+    examples: ["ls", "ls パン屋"]
+    options:
+      - { flag: "-a", desc: "隠れているもの（名前が . で始まるもの）も見る", short: "隠れているもの（. で始まる名前）も見る" }
+      - { flag: "場所", desc: "ls のうしろに場所を書くと、中に入らずにのぞける。いまいる場所の中なら名前だけ（ls 柵の裏）、どこからでも書くなら ~/ や / から（ls ~/村はずれ/柵の裏、ls /usr/霧の谷）", short: "入らずに中をのぞく（ls 柵の裏）" }
+      - { flag: "-l", desc: "くわしく見る。左の drwxr-x--- は扉の鍵のかけ方（持ち主・家族・よその人の3組。r のぞける、w 置ける、x 入れる）、つづいて持ち主と組。リンクなら「名前 -> 行き先」", short: "くわしく見る（鍵のかけ方・持ち主）" }
+    real: "フォルダの中身を一覧で表示するコマンド。list（一覧）の略。"
+
+  - name: cd
+    summary: 場所を移動する
+    usage: cd 場所
+    examples: ["cd パン屋（いまいる場所の中へ）", "cd ..（ひとつ外へ出る）", "cd ../パン屋（ひとつ外の中の、パン屋へ）", "cd きみの家/リビング（道のりを続けて書く）", "cd ~（ふるさとのチルダ村へ帰る）", "cd ~/井戸端（チルダ村から数えた住所）", "cd /usr（世界から数えた住所）"]
+    options:
+      - { flag: "..", desc: "ひとつ外の場所へ出る（部屋 → 家 → 村）。名前だけで行けるのは、いまいる場所の中にあるものだけなので、外の場所へは .. で出てから", short: "ひとつ外へ出る（部屋 → 家 → 村）" }
+      - { flag: "場所/場所", desc: "/ は「の中の」。きみの家/リビング は「きみの家の中の、リビング」、../パン屋 は「ひとつ外の中の、パン屋」。続けて書けば、一度で着く", short: "/ は「の中の」。../パン屋 は「ひとつ外の中の、パン屋」" }
+      - { flag: "~", desc: "~ はふるさとのチルダ村の呼び名。cd ~ で、村の中のどこからでも一気に戻れる。~/チョウン爺の家 のように、~/ のうしろに村の中の場所を続けて書けば、どこにいても、その場所へ一度で行ける", short: "チルダ村へ一気に戻る。~/井戸端 なら、どこからでも井戸端へ" }
+      - { flag: "/usr", desc: "/ から書く住所は、世界から数えた住所。どこからでも届く。地図の場所の右にある /usr などを打てば、そのステージのいちばん大きな場所へ行ける（~ も、世界から書くと /home/チルダ村）", short: "地図の右の /usr などで、そのステージへ（世界から数えた住所）" }
+      - { flag: "-", desc: "ひとつ前にいた場所へ戻る。もう一度打つと、また行き来できる（cd .. は「ひとつ上」、cd - は「さっきいた場所」）", short: "さっきいた場所へ戻る" }
+    real: "今いるフォルダ（作業ディレクトリ）を切り替えるコマンド。change directory の略。"
+
+  - name: cat
+    summary: 話しかける・調べる
+    usage: cat 名前
+    examples: ["cat 掲示板", "cat ナノ"]
+    real: "ファイルの中身を表示するコマンド。concatenate（つなげる）の略で、本当は複数のファイルをつなげて表示できる。"
+
+  - name: pwd
+    summary: いまいる場所を確かめる
+    usage: pwd
+    examples: ["pwd（/home/チルダ村/パン屋 なら、世界の中の、居住区の中の、チルダ村の中の、パン屋）"]
+    real: "今いるフォルダの場所を / から表示するコマンド。print working directory の略。"
+
+  - name: find
+    summary: 探し物をする
+    usage: find 場所 -name 名前
+    examples: ["find . -name 鈴（ここから下を探す）", "find /usr -name \"道しるべ*\"", "find /usr -type d -name \"*門*\""]
+    options:
+      - { flag: "-name", desc: "名前で探す。場所は . なら「ここから下」、/usr なら「森じゅう」", short: "名前で探す（. はここから下）" }
+      - { flag: "*", desc: "「なんでも」のしるし。道しるべ* は「道しるべで始まるもの」、*門* は「門を含むもの」", short: "「なんでも」のしるし（道しるべ*）" }
+      - { flag: "-type d", desc: "場所（フォルダ）だけを探す。-type f なら人やもの（ファイル）だけ", short: "場所だけを探す" }
+    real: "フォルダの中を奥までたどって、条件に合うファイルやフォルダを探すコマンド。本物では find / -name ... のように、どこからでも探せる。"
+
+  - name: file
+    summary: 正体を調べる
+    usage: file 名前
+    examples: ["file カエル弟", "file 渡り道A"]
+    real: "ファイルの中身が何なのか（文章・画像・圧縮されたもの・リンクなど）を教えてくれるコマンド。拡張子にだまされずに正体が分かる。"
+
+  - name: ln
+    summary: リンク（飛び石）をつくる
+    usage: ln -s 行き先 名前
+    examples: ["ln -s /lib/中州 飛び石"]
+    options:
+      - { flag: "-s", desc: "シンボリックリンクをつくる。行き先を指さす「道しるべ」のようなもの。cd や cat すると行き先に届く", short: "行き先を指す道しるべをつくる" }
+    real: "シンボリックリンク（Windows のショートカットのようなもの）をつくるコマンド。ln -s 本物の場所 リンクの名前。本物の cd は、リンクの名前のまま進む（ゲームでは、つないだ先の本当の場所に着く）。"
+
+  - name: unlink
+    summary: リンクを切る
+    usage: unlink 名前
+    examples: ["unlink 飛び石"]
+    real: "ファイルを1つ消すコマンド。この世界ではリンクだけを切れる。本物では rm でもリンクを消せる。"
+
+  - name: chmod
+    summary: 自分の物の鍵のかけ方を変える
+    usage: chmod だれに±どの鍵 名前
+    examples: ["chmod u+rwx 空き家（自分にぜんぶ開ける）", "chmod o-r 空き家（よその人にはのぞかせない）", "chmod g+x 空き家（家族を入れる）"]
+    options:
+      - { flag: "u g o a", desc: "だれへの許しか。u＝自分（持ち主）、g＝家族（同じ組の人）、o＝よその人、a＝みんな" }
+      - { flag: "+ - =", desc: "+ で開ける、- で閉める、= でそのとおりにする" }
+      - { flag: "r w x", desc: "どの鍵か。r＝窓からのぞける、w＝中に物を置ける、x＝扉を開けて入れる" }
+    real: "ファイルやフォルダのパーミッション（許し）を変えるコマンド。変えられるのは持ち主だけ。本物では chmod 755 のように数字でも書ける（7＝rwx、5＝r-x、4＝r--）。"
+
+  - name: groups
+    summary: 自分が入っている組を見る
+    usage: groups
+    examples: ["groups"]
+    real: "自分が入っているグループ（組）の一覧を表示するコマンド。同じグループの人どうしで、ファイルを分けあえる。"
+
+  - name: write
+    summary: 閉じた扉ごしに声を届ける
+    usage: write 名前 "ことば"
+    examples: ["write 薬屋のじいさん \"開けてください\""]
+    real: "同じコンピューターを使っている別の人の画面に、メッセージを送るコマンド。昔は、ログインしている仲間どうしの連絡に使われた。"
+
+  - name: mkdir
+    summary: 新しい場所をつくる
+    usage: mkdir 名前
+    examples: ["mkdir 舞台（いまいる場所の中に）", "mkdir ~/かばん（ふるさとの中に）"]
+    real: "新しいフォルダ（ディレクトリ）を作るコマンド。make directory の略。中に作れるのは、書きこみ（w）の許しがある場所だけ。"
+
+  - name: mv
+    summary: 物を運ぶ・名前を変える
+    usage: mv 運ぶ物 行き先
+    examples: ["mv 木箱 ../果物屋/（場所の中へ運ぶ）", "mv 通行証 ~/かばん/（かばんの中へ。どこからでも、かばんの住所で届く）", "mv 八百尾 八百屋（名前を変える）"]
+    real: "ファイルやフォルダを移動するコマンド。move の略。行き先に新しい名前を書くと、名前の変更（リネーム）になる。運んだ物は元の場所からなくなる。この世界では、人や、物語の大事な物は運べない。"
+
+  - name: cp
+    summary: 写しをとる
+    usage: cp 元 行き先
+    examples: ["cp 地図の巻物 ~/かばん/", "cp -r スドウの覚え書き ~/かばん/（場所ごと写す）"]
+    options:
+      - { flag: "-r", desc: "場所（フォルダ）を、中身ごと奥の奥まで写す。recursive（くり返して奥まで）の r。場所を写すときは、これがいる", short: "場所ごと、中身まで写す" }
+    real: "ファイルやフォルダをコピーするコマンド。copy の略。元の物は、そのまま残る。"
+
+  - name: tar
+    summary: 包みをのぞく・ほどく・まとめる
+    # 唱え方が3つあって -〇 を思い出しにくいので、入力候補に唱え方ごと出す
+    suggestFlags: true
+    usage: tar -tzf 包み
+    examples: ["tar -tzf カヤ.tar.gz（中をのぞく）", "tar -xzf カヤ.tar.gz（包みのそばで、ほどく）", "tar -czf 設計図.tar.gz 設計図（まとめる）"]
+    options:
+      - { flag: "-tzf", desc: "ほどかずに、包みの中をのぞいて確かめる。t は list（一覧）、z は gzip（ぎゅっと縛った包み）、f のうしろに包みの名前", short: "中をのぞく" }
+      - { flag: "-xzf", desc: "包みをほどいて、中身を出す。x は extract（取り出す）。包みの置いてある場所でほどく", short: "ほどく" }
+      - { flag: "-czf", desc: "まとめて、ぎゅっと縛った包みを作る。c は create（作る）。tar -czf 新しい包みの名前 まとめる物", short: "まとめる" }
+    real: "ファイルやフォルダを、ひとつのアーカイブ（tar）にまとめたり、取り出したりするコマンド。z をつけると gzip で圧縮・展開する。.tar.gz は「tar でまとめて、gzip で縮めた」ファイル。本物では、どこでほどいても、いまいる場所に中身が出てくる（ゲームでは、散らからないよう、包みのそばでほどく）。"
+
+  - name: kill
+    forbidden: true
+    summary: 動いているものを止める（禁じられた言葉）
+    usage: kill 番号
+    examples: ["kill 0999（番号は ps で確かめる）"]
+    real: "動いているプログラム（プロセス）を止めるコマンド。本物では、名前ではなく番号（PID）で指定する。番号をまちがえると、止めてはいけないものを止めてしまう。"
+    # 唱えるまでは、何が起こるか分からない謎の言葉
+    veil:
+      until: morihito_killed
+      summary: "？？？（石碑に刻まれていた言葉）"
+      usage: kill 名前
+      examples: ["kill ○○○"]
+      real: "？？？"
+    # 第0章で一度唱えたら、第1章からはしまっておく。第6章で、正しい kill（番号で止める）として戻ってくる
+    hideIf: "ch0_clear & !kill_returned"
+
+  - name: ps
+    summary: 目に見えない、動いているものの一覧
+    usage: ps
+    examples: ["ps（番号・状態・名前が並ぶ）"]
+    real: "動いているプログラム（プロセス）の一覧を出すコマンド。process status の略。PID（番号）は、プロセスひとつひとつにつく番号札。"
+
+  - name: fg
+    summary: 裏で動いているものを、表に呼ぶ
+    usage: fg 番号
+    examples: ["fg 0231"]
+    real: "裏（バックグラウンド）で動いているジョブを、表（フォアグラウンド）に戻すコマンド。foreground の略。本物では fg %1 のように、ジョブの番号で書く。"
+
+  - name: bg
+    summary: 表のものを、裏に戻す
+    usage: bg 番号
+    examples: ["bg 0455"]
+    real: "止まっているジョブを、裏（バックグラウンド）で動かし続けるコマンド。background の略。裏で動くこと自体は、悪いことではない。"
+
+  - name: chgrp
+    summary: 場所の組を変える
+    usage: chgrp 組 場所
+    examples: ["chgrp ムラガレ 隠れ場"]
+    real: "ファイルやフォルダのグループ（組）を変えるコマンド。change group の略。変えられるのは、自分の物を、自分が入っている組にするときだけ。"
+
+  - name: date
+    summary: 今の日時を確かめる
+    usage: date
+    examples: ["date（7月12日 火曜日 09:00:00 のように出る）"]
+    real: "今の日付と時刻を表示するコマンド。予定（cron）を組むときや、記録（ログ）の時刻と見比べるときに使う。"
+
+  - name: echo
+    summary: 言ったことが、そのまま返ってくる
+    usage: echo "ことば"
+    examples: ["echo やっほー", "echo \"0 9 * * * 鐘を鳴らす\" > 予定表（紙を書き直す）", "echo \"0 9 * * * 扉1を開ける\" >> 予定表（紙に書き足す）"]
+    options:
+      - { flag: ">", desc: "echo \"ことば\" > 紙 で、ことばを紙に写す。紙は書き直され、前の字は消える。* を使うときは、ことばを \" で囲む（囲まないと、本物では * がまわりの物の名前に化ける）", short: "紙を書き直す（前の字は消える）" }
+      - { flag: ">>", desc: "echo \"ことば\" >> 紙 で、紙のいちばん下に書き足す。前の字は、そのまま残る", short: "紙に書き足す" }
+    real: "うしろに書いた文字を、そのまま表示するコマンド。> ファイル で、表示するかわりにファイルへ書きこむ（上書き）、>> ファイル で、ファイルの最後に書き足す（追記）。> と >> は echo だけでなく、どのコマンドの出力にも使える（リダイレクト）。"
+
+  - name: crontab
+    summary: 予定表を、塔に渡す
+    usage: crontab 紙
+    examples: ["crontab 予定表（紙の予定を、塔に渡す）", "crontab -l（塔が覚えている予定を見る）"]
+    options:
+      - { flag: "-l", desc: "塔に渡してある予定を見る（list）", short: "渡してある予定を見る" }
+    real: "決まった時刻にコマンドを動かす予定表（crontab）を登録するコマンド。1行に「分 時 日 月 曜日 コマンド」と書き、* は「いつでも」。0 9 * * * なら毎日9時0分。本物では crontab -e でエディタを開いて書くことが多いが、crontab ファイル名 で、書いておいたファイルをそのまま登録することもできる。予定どおりに動かしているのは cron という、裏で動き続けるプログラム。"
+
+  - name: grep
+    summary: 言葉が出てくる行だけを、抜き出す
+    usage: grep 探したい言葉 記録の名前
+    examples: ["grep モリビト チルダ村.log", "grep モリビト *.log（.log で終わる紙ぜんぶから）", "history | grep kill（自分の記録から）"]
+    options:
+      - { flag: "*.log", desc: "記録の名前に * を使うと、まとめて探せる。*.log は「.log で終わる記録ぜんぶ」。2つ以上から探すと、行の前に記録の名前が出る", short: ".log で終わる記録ぜんぶから探す" }
+      - { flag: "|", desc: "history | grep kill のように | でつなぐと、左のコマンドが出した行を、grep に流しこんで探せる（パイプ）。この世界では、| のうしろには grep だけ書ける", short: "左のコマンドが出した行から探す（パイプ）" }
+    real: "ファイルの中から、文字を含む行だけを探して表示するコマンド。global regular expression print の略。-n で行の番号、-i で大文字と小文字を区別しない、-r でフォルダの中を奥まで探す。| （パイプ）でつなぐと、ほかのコマンドの出力からも探せる。"
+
+  - name: diff
+    summary: 二つの記録を見比べる
+    usage: diff 古い記録 新しい記録
+    examples: ["diff .守り人.log.1 守り人.log"]
+    real: "二つのファイルのちがう行だけを表示するコマンド（difference の略）。< は1つめのファイルだけにある行、> は2つめだけにある行。2c2 は「1つめの2行目が、2つめの2行目に変わった」、5d4 は「消えた」、3a4 は「足された」。プログラムの変更を確かめるときにも使う。"
+
+  - name: sudo
+    summary: 鍵束の力で唱える
+    usage: sudo 言葉
+    examples: ["sudo cp ~/かばん/設計図.tar.gz .（スドウの場所に写す）", "sudo systemctl start モリビト"]
+    real: "管理者（root）の力を借りて、コマンドを実行するコマンド。superuser do の略。ふつうは入れない場所や、変えられない物も扱える。はじめて使うと「ほかの人のプライバシーを尊重すること」「打つ前に考えること」「大きな力には大きな責任がともなうこと」という心得が表示される。"
+
+  - name: systemctl
+    summary: 守り人を動かす・確かめる
+    usage: systemctl start 名前
+    examples: ["sudo systemctl start モリビト（動かす。鍵束の力がいる）", "systemctl status モリビト（動いているか確かめる）"]
+    options:
+      - { flag: "start", desc: "止まっているものを動かす。鍵束の力（sudo）がいる", short: "動かす（sudo がいる）" }
+      - { flag: "status", desc: "動いているか（active）、止まっているか（inactive）を確かめる", short: "動いているか確かめる" }
+    real: "裏で動き続けるプログラム（サービス）を、動かしたり止めたり、状態を確かめたりするコマンド。本物の Linux では、systemd というしくみ（PID 1 ＝ この物語のモリビトにあたる）が、すべてのサービスを見守っている。"
+
+  - name: hint
+    system: true
+    summary: 次にやることのヒント
+    usage: hint
+    real: "ゲームだけのコマンド。本物のLinuxにはない。"
+
+  - name: help
+    system: true
+    summary: 知っているコマンドの一覧
+    usage: help
+    real: "本物のLinuxでは、コマンドの使い方は man コマンド名 や コマンド名 --help で調べる。"
+
+  - name: history
+    system: true
+    summary: これまでに打ったコマンド
+    usage: history
+    examples: ["history", "history | grep kill（kill の行だけ）"]
+    real: "本物のLinuxにもある。打ったコマンドの記録を表示する。長いときは history | grep 言葉 で探す。"
+
+  - name: clear
+    system: true
+    summary: 画面を消す
+    usage: clear
+    real: "本物のLinuxにもある。ターミナルの表示を消す。"
+
+  - name: exit
+    system: true
+    summary: セーブして、タイトルにもどる
+    usage: exit
+    real: "本物のLinuxにもある。ターミナル（シェル）を閉じて終わる。"
+
+  - name: restart
+    system: true
+    summary: はじめからやり直す
+    usage: restart
+    real: "ゲームだけのコマンド。"
