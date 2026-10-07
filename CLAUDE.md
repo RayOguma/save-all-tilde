@@ -5,7 +5,7 @@
 Linuxコマンドで進める謎解きゲーム。設計書は `docs/design.md`、ストーリーは `docs/story.md`（最初の企画書は `docs/v1_game_design_doc.md`）。本編は第0〜9章でエンディングまで。つづき（見守り役編）の案は `docs/sequel.md`（公開後に追加コンテンツとして足すので、本編のフラグ・場所の名前は変えない）。**`docs/sequel.md` は手元だけに置き、リポジトリには入れない**（`.gitignore`。リポジトリは公開なので、続編の中身はコミットにもコミットメッセージにも書かない）。シナリオの YAML のコメントは、遊ぶ人のブラウザには届かない（公開するビルドで取り除く。`vite.config.ts`）が、リポジトリでは読めるので、続編の中身（黒幕の名前など）は書かない。伏線には「伏線（くわしくは手元の docs/sequel.md）」とだけ書く
 
 ## コマンド
-- `npm run dev` — 開発サーバー (http://localhost:5173)。`http://localhost:5173/?dev` で開くと、タイトルの「章を選ぶ」から、まだ着いていない章も最初から遊べる（テストプレイ用。遊んだ記録は使わず、前の章までの `clear` からいつも新しく組み立てる）
+- `npm run dev` — 開発サーバー (http://localhost:5173)。`http://localhost:5173/?dev` で開くと（開発サーバーだけ。公開したページでは効かない）、タイトルの「章を選ぶ」から、まだ着いていない章も最初から遊べる（テストプレイ用。遊んだ記録は使わず、前の章までの `clear` からいつも新しく組み立てる）
 - `npm test` — vitest。`tests/ch0.test.ts` は第0章の通しプレイテスト
 - `npm run build` — 型チェック + ビルド（`dist/`、GitHub Pages にそのまま置ける）
 - `npm run script` — `scenario/ch*.yaml` から読み物用の台本 `docs/chapters/ch*_script.md` を書き出す（YAML を直したら実行）

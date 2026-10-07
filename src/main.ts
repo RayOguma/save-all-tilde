@@ -91,8 +91,9 @@ async function askName(): Promise<string> {
 }
 
 async function main() {
-  // ?dev をつけて開くと、まだ着いていない章も「章を選ぶ」から遊べる（テストプレイ用）
-  const dev = new URLSearchParams(location.search).has('dev');
+  // ?dev をつけて開くと、まだ着いていない章も「章を選ぶ」から遊べる（テストプレイ用）。
+  // 効くのは開発サーバー（npm run dev）だけで、公開したページでは何も起きない
+  const dev = import.meta.env.DEV && new URLSearchParams(location.search).has('dev');
   const saved = loadState();
   let st!: GameState;
   let mode: 'fresh' | 'continue' | 'chapter' = 'fresh';
