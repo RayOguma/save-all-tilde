@@ -798,7 +798,18 @@ export async function showTitle(hasSave: boolean, canSelect: boolean): Promise<T
   const sub = el('p', 'title-sub');
   sub.textContent = 'save all of Tilde';
   const menu = el('div', 'title-menu');
-  t.replaceChildren(logo, sub, menu);
+  // 村の一枚絵（16:9）。タイトルの文字とボタンは、絵の空のところに重ねる。絵は読みこめたら、ふわっと出す
+  const art = el('div', 'title-art');
+  const bg = el('div', 'title-art-bg');
+  const url = `${import.meta.env.BASE_URL}title.webp`;
+  bg.style.backgroundImage = `url("${url}")`;
+  const img = new Image();
+  img.onload = () => bg.classList.add('in');
+  img.src = url;
+  const inner = el('div', 'title-art-inner');
+  inner.append(logo, sub, menu);
+  art.append(bg, inner);
+  t.replaceChildren(art);
   t.hidden = false;
 
   await sleep(500);

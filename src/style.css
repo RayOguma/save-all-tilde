@@ -1175,6 +1175,58 @@ body.drained .map-group {
   display: flex;
   gap: 12px;
 }
+/* タイトルの一枚絵。画面に収まる大きさの 16:9 で、まわりは背景の黒（絵の枠の外と同じ色） */
+.title-art {
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+}
+.title-art-bg {
+  position: absolute;
+  inset: 0;
+  background: center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.title-art-bg.in {
+  opacity: 1;
+}
+/* 文字とボタンは、絵の上のほうの空に重ねる */
+.title-art-inner {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 12%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1cqw;
+}
+.title-art .title-logo {
+  font-size: clamp(36px, 8.5cqw, 140px);
+  /* 青い空の上でも読めるよう、濃い影をドットのように落とす */
+  text-shadow:
+    0.35cqw 0.35cqw 0 #1a1208,
+    0 0 2cqw rgba(242, 196, 109, 0.45);
+}
+.title-art .title-sub {
+  font-size: clamp(13px, 1.7cqw, 28px);
+  color: #fff6d8;
+  text-shadow: 0.15cqw 0.15cqw 0 #1a1208;
+  margin: 0 0 2cqw;
+}
+.title-art .ghost-btn {
+  background: rgba(7, 8, 10, 0.72);
+  border-color: var(--accent);
+  color: #fff6d8;
+}
+.title-art .primary-btn,
+.title-art .ghost-btn {
+  font-size: clamp(14px, 1.4cqw, 22px);
+  padding: 0.6em 1.4em;
+}
 .chapter-list {
   display: flex;
   flex-direction: column;
