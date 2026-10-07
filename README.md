@@ -1,33 +1,26 @@
 # save -a ~
-Linuxコマンド学習ゲーム「save -a ~」（save all of Tilde）
 
 > save -a ~ ― save all of Tilde
 
-ターミナルの中の村で、本物のLinuxコマンド（`ls` `cd` `cat` …）を使って物語を進める謎解きゲーム。
+ターミナルの中の村で、本物の Linux コマンド（`ls` `cd` `cat` …）を唱えて物語を進める、謎解きアドベンチャーです。
+
+ある朝、チルダ村の時が止まってしまいました。村を救うために、コマンドを覚えながら、森・沼・市場町・坑道……と旅をしていきます。Linux を触ったことがなくても、はじめから遊べます。
 
 ## 遊ぶ
 
-https://rayoguma.github.io/Moribito/
+**https://rayoguma.github.io/Moribito/**
 
-ブラウザで開くだけで遊べます（セーブは遊んでいるブラウザに保存されます）。
+- ブラウザで開くだけで遊べます（インストール不要）
+- パソコンのブラウザ（キーボード）で遊ぶのがおすすめです
+- セーブは、遊んでいるブラウザに自動で残ります。「章を選ぶ」から、着いたことのある章をやり直せます
+- 音が出ます（設定で音量を変えたり、切ったりできます）
 
-## 開発
+## 遊び方のこつ
 
-```sh
-npm install
-npm run dev      # http://localhost:5173
-npm test         # 第0章の通しプレイなどのテスト
-npm run build    # 公開用のファイルを dist/ に作る
-npm run script   # シナリオ（scenario/*.yaml）から台本 docs/chapters/*_script.md を書き出す
-```
-
-`main` に push すると、GitHub Actions がテスト → ビルド → GitHub Pages への公開を自動で行います。
-
-## 資料
-
-- [設計書](docs/design.md) — 画面・セーブ・公開などの方針
-- [ストーリー](docs/story.md) — 全10章の骨組み
-- [第0章の設計](docs/chapters/ch0.md) と [台本](docs/chapters/ch0_script.md)
+- 困ったら `hint` と打つか、💡 ボタンを押すと、ヒントが少しずつ出ます
+- `Tab` キーで、名前やコマンドの続きを補えます。打っている途中に出る候補からも、↑↓ で選べます
+- 覚えたコマンドは、右の「手帳」でいつでも見返せます
+- 左の地図には、`ls` で見渡した場所が載っていきます
 
 ## クレジット
 
@@ -38,3 +31,16 @@ npm run script   # シナリオ（scenario/*.yaml）から台本 docs/chapters/*
   - Church Bell03-11 (Far-Low-Mid)／Clock-Second Hand02-3 (Dry-Loop)
 
 ※音楽は「もみじばミュージック」のフリーBGMを使用しています。`public/bgm/` の音楽・効果音の著作権は、それぞれの制作者にあります。このリポジトリから取り出して、ほかの用途に使うことはできません。使いたい場合は、各サイトの利用規約にしたがって、元のサイトから入手してください。
+
+## 開発
+
+制作者向けのメモです（中身には、物語のネタバレがふくまれます）。
+
+```sh
+npm install
+npm run dev      # 開発サーバー http://localhost:5173
+npm test         # テスト（章ごとの通しプレイなど）
+npm run build    # 公開用のファイルを dist/ に作る
+```
+
+`main` に push すると、GitHub Actions がテスト → ビルド → GitHub Pages への公開を自動で行います。
