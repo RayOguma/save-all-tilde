@@ -10,7 +10,7 @@ import ch7 from '../scenario/ch7.yaml?raw';
 import ch8 from '../scenario/ch8.yaml?raw';
 import ch9 from '../scenario/ch9.yaml?raw';
 import commands from '../scenario/commands.yaml?raw';
-import { snapshot, startAtChapter } from './checkpoint';
+import { fillChapterCheckpoint, snapshot, startAtChapter } from './checkpoint';
 import { buildMap, currentStage } from './map';
 import { loadScenario } from './scenario';
 import { Shell } from './shell';
@@ -21,6 +21,7 @@ import {
   BookPane,
   chooseChapter,
   chooseGender,
+  confirmDialog,
   Handbook,
   MapView,
   ObjectiveView,
@@ -37,6 +38,9 @@ import {
   toast,
 } from './ui/panels';
 import { Frame } from './ui/frame';
+import { setupLayout } from './ui/layout';
+import { applyTextSize } from './ui/settings';
+import { NEWS } from './news';
 import { startAmbience } from './ui/ambience';
 import { cutMusic, playOnce, resumeStageMusic, setStageMusic } from './ui/music';
 import { drawScene } from './ui/scenes';
@@ -52,6 +56,18 @@ const MUSIC = { title: '水平線を見据えて', chapterStart: '仲間２', ch
 const $ = (id: string) => document.getElementById(id)!;
 
 const scn = loadScenario([ch0, ch1, ch2, ch3, ch4, ch5, ch6, ch7, ch8, ch9], commands);
+
+// 設定の文字の大きさと、地図・手帳の幅（境目のつまみ）を、はじめに当てておく
+applyTextSize();
+setupLayout();
+
+/** セーブの進み具合で、いまの章（shell.chapter() と同じ決め方） */
+function chapterOf(st: GameState) {
+  return [...scn.chapters].reverse().find((c) => check(c.startIf, st.flags)) ?? scn.chapters[0];
+}
+
+/** 「第1章 はじめての森」のように */
+const chapterName = (c: { no: number; title: string }) => `第${c.no}章「${c.title}」`;
 
 /** その章で覚えたコマンドと、短い使い方（エンディングで、挿絵の横に流す）。第0章は、はじめから使える ls・cd・cat も */
 function lessonsOf(no: number): { cmd: string; desc: string }[] {
@@ -95,6 +111,10 @@ async function main() {
   // 効くのは開発サーバー（npm run dev）だけで、公開したページでは何も起きない
   const dev = import.meta.env.DEV && new URLSearchParams(location.search).has('dev');
   const saved = loadState();
+  // 設定は、タイトルからも開ける（音量や文字の大きさを、始める前に変えられるように）
+  const settingsView = new SettingsView($('settings'));
+  // 章の終わりで「セーブして終わる」を選んだセーブにも、次の章のチェックポイントを残す（「章を選ぶ」で選べるように）
+  if (saved && fillChapterCheckpoint(scn, saved)) saveState(saved);
   let st!: GameState;
   let mode: 'fresh' | 'continue' | 'chapter' = 'fresh';
   // ゲームオーバーで、やり直しの場面を読みこみ直したところ。タイトルは飛ばして、そのまま続ける
@@ -112,26 +132,70 @@ async function main() {
       break;
     }
     const canSelect = dev || Object.keys(saved?.checkpoints ?? {}).length > 0;
-    const choice = await showTitle(!!saved, canSelect);
+    const choice = await showTitle(!!saved, canSelect, {
+      news: NEWS,
+      openSettings: () => settingsView.open(),
+      // 「つづきから」も、どこから続くかを見せて確かめる
+      confirmContinue: saved
+        ? () => {
+            const cur = chapterOf(saved);
+            const fromStart = !(saved.introSeen ?? []).includes(cur.no);
+            return confirmDialog({
+              title: 'つづきから遊ぶ？',
+              message: `${saved.name}の旅を、${chapterName(cur)}${fromStart ? 'のはじめ' : ''}からつづけます。`,
+              ok: 'つづける',
+              cancel: 'やめておく',
+              focusOk: true,
+            });
+          }
+        : undefined,
+    });
     if (choice === 'continue' && saved) {
       st = saved;
       mode = 'continue';
       break;
     }
     if (choice === 'select') {
-      const no = await chooseChapter(
-        scn.chapters.map((c) => ({
-          no: c.no,
-          title: c.title,
-          available: dev || c.no === 0 || !!saved?.checkpoints?.[c.no],
-        })),
-      );
+      let no: number | null = null;
+      for (;;) {
+        no = await chooseChapter(
+          scn.chapters.map((c) => ({
+            no: c.no,
+            title: c.title,
+            available: dev || c.no === 0 || !!saved?.checkpoints?.[c.no],
+          })),
+        );
+        // セーブがあるときは、上書きしてよいか確かめる（まちがえて押したときに、もどれるように）
+        if (no === null || !saved) break;
+        const ok = await confirmDialog({
+          title: 'この章のはじめから遊ぶ？',
+          message: `${chapterName(scn.chapters.find((c) => c.no === no)!)}のはじめから遊びます。いまの「つづきから」のセーブ（${chapterName(chapterOf(saved))}）は、上書きされます。`,
+          note: '着いたことのある章は、あとでまた「章を選ぶ」から遊べます。',
+          ok: `第${no}章を遊ぶ`,
+          cancel: 'やめておく',
+          danger: true,
+        });
+        if (ok) break;
+      }
       if (no === null) continue;
       st = startAtChapter(scn, no, saved, dev);
       mode = 'chapter';
       break;
     }
-    // はじめから。章のチェックポイントは残しておく（あとで「章を選ぶ」から戻れるように）
+    // はじめから。セーブがあるときは、消えてよいか確かめる
+    if (
+      saved &&
+      !(await confirmDialog({
+        title: 'はじめから遊ぶ？',
+        message: `いまの「つづきから」のセーブ（${chapterName(chapterOf(saved))}）は消えて、第0章のはじめからになります。`,
+        note: '着いたことのある章は、「章を選ぶ」から遊べます。',
+        ok: 'はじめから遊ぶ',
+        cancel: 'やめておく',
+        danger: true,
+      }))
+    )
+      continue;
+    // 章のチェックポイントは残しておく（あとで「章を選ぶ」から戻れるように）
     const checkpoints = saved?.checkpoints;
     clearState();
     const gender = await chooseGender();
@@ -216,7 +280,6 @@ async function main() {
     await runGuide(steps);
   };
   startAmbience();
-  const settingsView = new SettingsView($('settings'));
   $('btn-settings').addEventListener('click', () => settingsView.toggle());
   const menuView = new MenuView($('menu'), { quit, restart });
   $('btn-menu').addEventListener('click', () => menuView.toggle());

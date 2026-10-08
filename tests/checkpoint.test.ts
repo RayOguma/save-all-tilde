@@ -7,7 +7,7 @@ import ch3Yaml from '../scenario/ch3.yaml?raw';
 import ch4Yaml from '../scenario/ch4.yaml?raw';
 import ch5Yaml from '../scenario/ch5.yaml?raw';
 import ch6Yaml from '../scenario/ch6.yaml?raw';
-import { snapshot, startAtChapter, stateAtChapter } from '../src/checkpoint';
+import { fillChapterCheckpoint, snapshot, startAtChapter, stateAtChapter } from '../src/checkpoint';
 import { loadScenario } from '../src/scenario';
 import { Shell, type Term } from '../src/shell';
 import type { GameState } from '../src/state';
@@ -94,6 +94,23 @@ describe('章を選んで始める', () => {
     expect(st.introSeen).toEqual([0, 1]); // 選んだ章の導入は、もう一度見る
     expect(st.checkpoints?.[2]).toBeDefined(); // チェックポイントは残る
     expect(st.flags.ch2_clear).toBeUndefined();
+  });
+
+  it('章の終わりで「セーブして終わる」を選んだセーブでも、次の章を選べる', () => {
+    const scn = load();
+    // 第1章をクリアして、第2章が始まる前にやめたセーブ（第2章の導入はまだ見ていない）
+    const saved: GameState = { ...stateAtChapter(scn, 2, { name: 'ミオ', gender: 'girl' }), checkpoints: { 1: snapshot(stateAtChapter(scn, 1, { name: 'ミオ', gender: 'girl' }), 1) } };
+    expect(fillChapterCheckpoint(scn, saved)).toBe(true);
+    expect(saved.checkpoints?.[2]).toBeDefined();
+
+    const { shell } = play(startAtChapter(scn, 2, saved));
+    expect(shell.chapter().no).toBe(2);
+    expect(shell.needsChapterStart()).toBe(true); // 導入から始まる
+
+    // もう始まっている章には、足さない（章のはじめのチェックポイントを、途中の状態で上書きしない）
+    const started: GameState = { ...stateAtChapter(scn, 2, { name: 'ミオ', gender: 'girl' }), introSeen: [0, 1, 2] };
+    expect(fillChapterCheckpoint(scn, started)).toBe(false);
+    expect(started.checkpoints?.[2]).toBeUndefined();
   });
 
   it('?dev のテストプレイでは、遊んだ記録を使わず、いつも新しく組み立てる', () => {

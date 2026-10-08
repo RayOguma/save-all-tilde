@@ -1,7 +1,7 @@
 // 章のチェックポイント。「章を選ぶ」で、章の最初から遊べるようにする。
 import type { Scenario } from './scenario';
 import { newState, type Gender, type GameState } from './state';
-import { PLAYER, splitPath } from './vfs';
+import { check, PLAYER, splitPath } from './vfs';
 
 /** 今のセーブを、章の最初の状態として写しておく（チェックポイントの中にチェックポイントは入れない） */
 export function snapshot(st: GameState, chapterNo: number): GameState {
@@ -10,6 +10,18 @@ export function snapshot(st: GameState, chapterNo: number): GameState {
   // この章の導入は、まだ見ていないことにする（選んだときに、導入から始まるように）
   copy.introSeen = (copy.introSeen ?? []).filter((n) => n !== chapterNo);
   return copy;
+}
+
+/**
+ * 章の始まりの前で止まっているセーブに、その章のチェックポイントを足す（足したら true）。
+ * 章の終わりの画面で「セーブして終わる」を選ぶと、次の章が始まる前にタイトルへもどるので、
+ * そのままだと次の章のチェックポイントがなく、「章を選ぶ」で選べない
+ */
+export function fillChapterCheckpoint(scn: Scenario, saved: GameState): boolean {
+  const cur = [...scn.chapters].reverse().find((c) => check(c.startIf, saved.flags)) ?? scn.chapters[0];
+  if (saved.checkpoints?.[cur.no] || (saved.introSeen ?? []).includes(cur.no)) return false;
+  saved.checkpoints = { ...saved.checkpoints, [cur.no]: snapshot(saved, cur.no) };
+  return true;
 }
 
 /**

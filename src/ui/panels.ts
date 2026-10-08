@@ -5,7 +5,9 @@ import { shelved, shownDoc, type CommandDoc } from '../scenario';
 import type { Flags } from '../vfs';
 import type { GuideStep } from '../vfs';
 import type { Gender } from '../state';
-import { CHAR_MS, saveSettings, settings, SPEED_LABEL, type Speed } from './settings';
+import type { NewsItem } from '../news';
+import { applyTextSize, CHAR_MS, saveSettings, settings, SPEED_LABEL, TEXT_SIZE_LABEL, type Speed, type TextSize } from './settings';
+import { resetLayout } from './layout';
 import { refreshMusicVolume } from './music';
 import { blip, sfx } from './sound';
 import { el } from './terminal';
@@ -93,6 +95,11 @@ export class MapView {
       li.append(spriteImg(r.stopped && r.kind === 'process' ? 'proc-stopped' : r.icon.replace(/^char:/, ''), 'icon'));
       const label = el('span', 'map-label');
       label.textContent = r.label ?? '？？？';
+      // 名前が「…」で切れているときは、マウスを乗せると全部見える
+      label.addEventListener('mouseenter', () => {
+        if (label.scrollWidth > label.clientWidth) label.title = [label.textContent, li.title].filter(Boolean).join('\n');
+        else label.removeAttribute('title');
+      });
       li.append(label);
       if (r.sub) {
         const sub = el('span', 'map-sub');
@@ -254,10 +261,115 @@ export function toast(text: string, kind = 'learn') {
   setTimeout(() => t.remove(), 3800);
 }
 
-// ---- 📖 コマンド手帳 ----
+/// ---- 📖 コマンド手帳 ----
+
+/** 手帳の並べ方。新しい順・覚えた順は、覚えた順番（st.learned。オプションを覚えたときも、そのコマンドが新しくなる） */
+export type BookOrder = 'new' | 'old' | 'name';
+const ORDER_LABEL: Record<BookOrder, string> = { new: '新しい順', old: '覚えた順', name: 'ABC順' };
+const ORDER_KEY = 'moribito-book-order';
+
+/** 並べ方は、右の手帳と引き出しの手帳で同じにして、ブラウザに覚えておく */
+let bookOrder: BookOrder = loadOrder();
+
+function loadOrder(): BookOrder {
+  try {
+    const v = localStorage.getItem(ORDER_KEY);
+    if (v && v in ORDER_LABEL) return v as BookOrder;
+  } catch {
+    /* 新しい順で */
+  }
+  return 'new';
+}
+
+function saveOrder(o: BookOrder) {
+  bookOrder = o;
+  try {
+    localStorage.setItem(ORDER_KEY, o);
+  } catch {
+    /* 保存できなくても続行 */
+  }
+}
+
+/** 手帳に載せる、覚えたコマンド（並べて、さがす言葉でしぼったもの） */
+function bookEntries(data: BookData, query = ''): (CommandDoc & { veiled?: boolean })[] {
+  const { learned, docs, flags } = data;
+  // そのコマンドか、そのオプションを覚えた、いちばん新しい順番
+  const rank = (name: string) => learned.reduce((r, l, i) => (l === name || l.startsWith(`${name} `) ? i : r), -1);
+  const list = Object.values(docs)
+    .filter((d) => !d.system && learned.includes(d.name) && !shelved(d, flags))
+    .map((d) => ({ d: shownDoc(d, flags), rank: rank(d.name) }));
+  if (bookOrder === 'new') list.sort((x, y) => y.rank - x.rank);
+  else if (bookOrder === 'old') list.sort((x, y) => x.rank - y.rank);
+  else list.sort((x, y) => x.d.name.localeCompare(y.d.name, 'en'));
+  const q = query.normalize('NFKC').trim().toLowerCase();
+  // さがすのは、手帳に見えている字だけ（伏せたコマンドの本当の説明では見つからない）
+  const text = (d: CommandDoc) => {
+    const opts = (d.options ?? []).filter((o) => learned.includes(`${d.name} ${o.flag}`));
+    return [d.name, d.summary, d.usage, ...opts.flatMap((o) => [o.flag, o.desc, o.short ?? ''])].join(' ');
+  };
+  return list.map((x) => x.d).filter((d) => !q || text(d).normalize('NFKC').toLowerCase().includes(q));
+}
+
+/** 手帳の上の、さがす欄と並べ方の切りかえ。中身が変わったら onChange */
+class BookFilter {
+  readonly root: HTMLElement;
+  private readonly input: HTMLInputElement;
+  private readonly seg: HTMLElement;
+
+  constructor(private readonly onChange: () => void) {
+    this.root = el('div', 'book-filter');
+    const box = el('label', 'book-search');
+    box.append(Object.assign(el('span', 'book-search-icon'), { textContent: '🔍' }));
+    this.input = document.createElement('input');
+    Object.assign(this.input, { type: 'search', placeholder: 'さがす（名前・説明）', autocomplete: 'off', spellcheck: false });
+    this.input.setAttribute('aria-label', '手帳のコマンドをさがす');
+    this.input.addEventListener('input', () => this.onChange());
+    this.input.addEventListener('keydown', (e) => {
+      // Esc で、さがす言葉を消す（消えていれば、引き出しを閉じるなど、いつもの Esc に任せる）
+      if (e.key === 'Escape' && this.input.value) {
+        e.stopPropagation();
+        this.input.value = '';
+        this.onChange();
+      }
+    });
+    box.append(this.input);
+    this.seg = el('div', 'book-order');
+    this.seg.setAttribute('role', 'radiogroup');
+    this.seg.setAttribute('aria-label', '並べ方');
+    this.root.append(box, this.seg);
+    this.renderOrder();
+  }
+
+  get query() {
+    return this.input.value;
+  }
+
+  /** 並べ方のボタン（もう一方の手帳で変えたときも、合わせる） */
+  renderOrder() {
+    this.seg.replaceChildren(
+      ...(Object.keys(ORDER_LABEL) as BookOrder[]).map((o) => {
+        const b = button(ORDER_LABEL[o], o === bookOrder ? 'seg on' : 'seg', () => {
+          saveOrder(o);
+          this.renderOrder();
+          this.onChange();
+        });
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(o === bookOrder));
+        return b;
+      }),
+    );
+  }
+}
+
+/** さがしても見つからないとき */
+function noHit(query: string): HTMLElement {
+  return Object.assign(el('p', 'book-empty'), { textContent: `「${query.trim()}」は、手帳に見つからない。` });
+}
 
 export class Handbook {
   private tab: 'cmd' | 'hist' = 'cmd';
+  private readonly filter = new BookFilter(() => this.renderCards());
+  private cards: HTMLElement | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -291,8 +403,7 @@ export class Handbook {
   }
 
   private render() {
-    const { learned, docs: raw, history, flags } = this.data();
-    const docs = Object.fromEntries(Object.entries(raw).map(([k, d]) => [k, shownDoc(d, flags)]));
+    const { docs: raw, history, flags, learned } = this.data();
     const panel = el('div', 'drawer-panel');
     const head = el('div', 'drawer-head');
     const title = el('h2', '');
@@ -308,13 +419,16 @@ export class Handbook {
     );
 
     const body = el('div', 'drawer-body');
+    this.cards = null;
     if (this.tab === 'cmd') {
-      const main = Object.values(docs).filter((d) => !d.system && learned.includes(d.name) && !shelved(raw[d.name], flags));
-      for (const d of main) body.append(this.card(d, learned));
+      this.filter.renderOrder();
+      this.cards = el('div', '');
+      body.append(this.filter.root, this.cards);
+      this.renderCards();
       const sys = el('h3', '');
       sys.textContent = 'そのほかの操作';
       body.append(sys);
-      for (const d of Object.values(docs).filter((d) => d.system)) body.append(this.card(d, learned, true));
+      for (const d of Object.values(raw).filter((d) => d.system)) body.append(this.card(shownDoc(d, flags), learned, true));
     } else {
       const recent = [...new Set([...history].reverse())].slice(0, 30);
       if (!recent.length) body.append(Object.assign(el('p', 'muted'), { textContent: 'まだ何も打っていない。' }));
@@ -322,6 +436,15 @@ export class Handbook {
     }
     panel.append(head, tabs, body);
     this.root.replaceChildren(panel);
+  }
+
+  /** 覚えたコマンドのカード（並べ方・さがす言葉を変えたら、ここだけ描き直す） */
+  private renderCards() {
+    if (!this.cards) return;
+    const data = this.data();
+    const list = bookEntries(data, this.filter.query);
+    this.cards.replaceChildren(...list.map((d) => this.card(d, data.learned)));
+    if (!list.length && this.filter.query.trim()) this.cards.append(noHit(this.filter.query));
   }
 
   private card(d: CommandDoc & { veiled?: boolean }, learned: string[], compact = false): HTMLElement {
@@ -367,35 +490,52 @@ export interface BookData {
 
 /**
  * 右に出しておくコマンド手帳。覚えたコマンドの書き方と例を、いつでも見られるようにする
- * （はじめての人がコマンドを覚えられるように。くわしい説明は「くわしく」から引き出しで）
+ * （はじめての人がコマンドを覚えられるように。くわしい説明は「くわしく」から引き出しで）。
+ * 上の欄で、さがしたり、並べ方（新しい順・覚えた順・ABC順）を変えたりできる
  */
 export class BookPane {
   private known = new Set<string>();
   private first = true;
+  private readonly list = el('div', 'book-list');
+  private readonly filter = new BookFilter(() => this.renderList(new Set()));
 
   constructor(
     private readonly root: HTMLElement,
     private readonly data: () => BookData,
     private readonly onPick: (command: string) => void,
     private readonly openDetail: () => void,
-  ) {}
-
-  render() {
-    const { learned, docs, flags } = this.data();
+  ) {
     const title = el('div', 'pane-title book-title');
     title.append(Object.assign(el('span', ''), { textContent: '📖 コマンド手帳' }));
     title.append(button('くわしく', 'mini-btn', () => this.openDetail()));
-    const list = el('div', 'book-list');
-    const main = Object.values(docs)
-      .filter((d) => !d.system && learned.includes(d.name) && !shelved(d, flags))
-      .map((d) => shownDoc(d, flags));
-    for (const d of main) {
+    const foot = el('p', 'bk-foot');
+    foot.append('名前は途中まで打って ', Object.assign(el('span', 'cmd'), { textContent: 'Tab' }), ' で補える。困ったら ');
+    foot.append(Object.assign(el('span', 'cmd'), { textContent: 'hint' }), '。');
+    this.root.replaceChildren(title, this.filter.root, this.list, foot);
+  }
+
+  /** 進み具合が変わったら描き直す。新しく覚えたコマンドや、増えたオプションは光らせる */
+  render() {
+    const { learned } = this.data();
+    const fresh = new Set<string>();
+    for (const d of bookEntries(this.data())) {
       const opts = (d.options ?? []).filter((o) => learned.includes(`${d.name} ${o.flag}`));
       const key = [d.name, d.summary, ...opts.map((o) => o.flag)].join('|');
-      const card = el('section', d.veiled ? 'bk mystery' : d.forbidden ? 'bk forbidden' : 'bk');
-      // 新しく覚えたコマンドや、増えたオプションを光らせる
-      if (!this.first && !this.known.has(key)) card.classList.add('fresh');
+      if (!this.first && !this.known.has(key)) fresh.add(d.name);
       this.known.add(key);
+    }
+    this.first = false;
+    this.filter.renderOrder();
+    this.renderList(fresh);
+  }
+
+  private renderList(fresh: Set<string>) {
+    const { learned } = this.data();
+    const docs = bookEntries(this.data(), this.filter.query);
+    const cards = docs.map((d) => {
+      const opts = (d.options ?? []).filter((o) => learned.includes(`${d.name} ${o.flag}`));
+      const card = el('section', d.veiled ? 'bk mystery' : d.forbidden ? 'bk forbidden' : 'bk');
+      if (fresh.has(d.name)) card.classList.add('fresh');
       card.tabIndex = 0;
       card.title = `クリックで「${d.name}」を入力`;
       const head = el('div', 'bk-head');
@@ -411,13 +551,12 @@ export class BookPane {
       const pick = () => this.onPick(`${d.name} `);
       card.addEventListener('click', pick);
       card.addEventListener('keydown', (e) => e.key === 'Enter' && pick());
-      list.append(card);
-    }
-    const foot = el('p', 'bk-foot');
-    foot.append('名前は途中まで打って ', Object.assign(el('span', 'cmd'), { textContent: 'Tab' }), ' で補える。困ったら ');
-    foot.append(Object.assign(el('span', 'cmd'), { textContent: 'hint' }), '。');
-    this.root.replaceChildren(title, list, foot);
-    this.first = false;
+      return card;
+    });
+    this.list.replaceChildren(...cards);
+    if (!docs.length && this.filter.query.trim()) this.list.append(noHit(this.filter.query));
+    // 新しく覚えたコマンドが見えるように（新しい順なら、いちばん上）
+    this.list.querySelector('.fresh')?.scrollIntoView({ block: 'nearest' });
   }
 }
 
@@ -543,9 +682,31 @@ export class SettingsView {
       refreshMusicVolume();
     });
     vol.addEventListener('change', () => void this.playPreview(preview));
+    const size = segmented(
+      (Object.keys(TEXT_SIZE_LABEL) as TextSize[]).map((k) => [k, TEXT_SIZE_LABEL[k]]),
+      settings.textSize,
+      (v) => {
+        settings.textSize = v as TextSize;
+        saveSettings();
+        applyTextSize();
+        // 候補の行の矢印などは、窓の大きさが変わったときに測り直している
+        window.dispatchEvent(new Event('resize'));
+      },
+    );
+    const width = el('div', 'setting-width');
+    width.append(
+      button('もとの幅にもどす', 'mini-btn', () => {
+        resetLayout();
+        window.dispatchEvent(new Event('resize'));
+        toast('地図と手帳の幅を、もとにもどしました', 'info');
+      }),
+      Object.assign(el('p', 'setting-note'), { textContent: '地図・手帳とターミナルの境目をドラッグすると、幅を変えられます' }),
+    );
 
     const body = el('div', 'drawer-body');
     body.append(
+      setting('文字の大きさ', size),
+      setting('画面の幅', width),
       setting('文字の速さ', speed),
       setting('文字の音', sound),
       setting('効果音', effects),
@@ -790,8 +951,22 @@ function placeBubble(b: HTMLElement, r: DOMRect) {
 
 export type TitleChoice = 'new' | 'continue' | 'select';
 
-export async function showTitle(hasSave: boolean, canSelect: boolean): Promise<TitleChoice> {
+/** タイトルの文字を打ってみせたか（「章を選ぶ」からもどったときなどは、打ち直さずにすぐ出す） */
+let titleTyped = false;
+
+/** タイトルでできること（つづきからの確認・設定） */
+export interface TitleOpts {
+  news?: NewsItem[];
+  /** 「つづきから」を押したときに確かめる。false なら、タイトルのまま */
+  confirmContinue?: () => Promise<boolean>;
+  /** 「設定」を押したとき */
+  openSettings?: () => void;
+}
+
+export async function showTitle(hasSave: boolean, canSelect: boolean, opts: TitleOpts = {}): Promise<TitleChoice> {
+  const news = opts.news ?? [];
   const t = document.getElementById('title')!;
+  t.classList.remove('choosing');
   // タイトルは、ターミナルに打つように1文字ずつ出す。下に小さく、英語の読み（-a は all、~ はチルダ村）
   const logo = el('h1', 'title-logo');
   logo.setAttribute('aria-label', 'save -a ~');
@@ -809,44 +984,235 @@ export async function showTitle(hasSave: boolean, canSelect: boolean): Promise<T
   const inner = el('div', 'title-art-inner');
   inner.append(logo, sub, menu);
   art.append(bg, inner);
+  // お知らせは、絵の黄色い枠の内側（右下）に置く
+  if (news.length) art.append(newsBox(news));
   t.replaceChildren(art);
   t.hidden = false;
 
-  await sleep(500);
-  for (const ch of 'save -a ~') {
-    logo.textContent += ch;
-    await sleep(110);
+  if (titleTyped) {
+    logo.textContent = 'save -a ~';
+    sub.classList.add('in');
+  } else {
+    await sleep(500);
+    for (const ch of 'save -a ~') {
+      logo.textContent += ch;
+      await sleep(110);
+    }
+    await sleep(250);
+    sub.classList.add('in');
+    await sleep(400);
+    titleTyped = true;
   }
-  await sleep(250);
-  sub.classList.add('in');
-  await sleep(400);
 
   return new Promise((resolve) => {
-    const choose = async (c: TitleChoice) => {
+    let busy = false;
+    const choose = async (c: TitleChoice, from: HTMLButtonElement) => {
+      if (busy) return;
+      if (c === 'continue' && opts.confirmContinue) {
+        busy = true;
+        const ok = await opts.confirmContinue();
+        busy = false;
+        if (!ok) return from.focus();
+      }
       // ターミナルへ戻るのは「つづきから」だけ。ほかは、この暗い画面のまま次の画面に入れ替える
       if (c === 'continue') await fadeOut(t);
       resolve(c);
     };
-    if (hasSave) menu.append(button('つづきから', 'primary-btn', () => choose('continue')));
-    if (canSelect) menu.append(button('章を選ぶ', 'ghost-btn', () => choose('select')));
-    menu.append(button('はじめから', hasSave ? 'ghost-btn' : 'primary-btn', () => choose('new')));
+    const item = (label: string, cls: string, c: TitleChoice) => {
+      const b = button(label, cls, () => void choose(c, b));
+      menu.append(b);
+    };
+    // ボタンは縦に並べる（つづきから・章を選ぶ・はじめから・設定）
+    menu.classList.add('title-menu-col');
+    if (hasSave) item('つづきから', 'primary-btn', 'continue');
+    if (canSelect) item('章を選ぶ', 'ghost-btn', 'select');
+    item('はじめから', hasSave ? 'ghost-btn' : 'primary-btn', 'new');
+    // 設定（音量・文字の大きさなど）は、ゲームを始める前にも変えられる
+    if (opts.openSettings) menu.append(button('⚙ 設定', 'ghost-btn', () => opts.openSettings!()));
     (menu.querySelector('button') as HTMLButtonElement).focus();
   });
+}
+
+// ---- お知らせ ----
+
+const NEWS_SEEN_KEY = 'moribito-news-seen';
+
+/** 読んだお知らせ（日付と見出し）。遊ぶ人のブラウザに残す */
+function seenNews(): Set<string> {
+  try {
+    const v = JSON.parse(localStorage.getItem(NEWS_SEEN_KEY) ?? '[]');
+    return new Set(Array.isArray(v) ? v.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/** 記事を開いたら、読んだことにする */
+function markNewsSeen(n: NewsItem) {
+  const seen = seenNews();
+  seen.add(newsKey(n));
+  try {
+    localStorage.setItem(NEWS_SEEN_KEY, JSON.stringify([...seen]));
+  } catch {
+    /* 保存できなくても続行 */
+  }
+}
+
+const newsKey = (n: NewsItem) => `${n.date} ${n.title}`;
+/** "2026-10-08" → "2026.10.08" */
+const newsDate = (d: string) => d.replaceAll('-', '.');
+/** 見出しの左の、まだ読んでいない印（赤い●）。読んだ記事も場所だけ空けて、見出しの頭をそろえる */
+function unreadDot(unread: boolean): HTMLElement {
+  const dot = el('span', unread ? 'news-dot unread' : 'news-dot');
+  dot.setAttribute('aria-label', unread ? 'まだ読んでいない' : '');
+  if (!unread) dot.setAttribute('aria-hidden', 'true');
+  return dot;
+}
+
+/**
+ * タイトルの右下のお知らせ欄。
+ * 「📢 お知らせ」を押すと記事の一覧、その下の新しい記事の見出しを押すと、その記事の本文が開く。
+ * 読んでいない記事があれば、枠の左上に赤い丸で数を出す（読むと減って、ぜんぶ読むと消える）。
+ * 絵が小さいせまい画面では、「📢 お知らせ」だけを出す
+ */
+function newsBox(news: NewsItem[]): HTMLElement {
+  const box = el('section', 'news-box');
+  box.setAttribute('aria-label', 'お知らせ');
+  const badge = el('span', 'news-badge');
+  const head = button('📢 お知らせ', 'news-head', () => openNews(news, null, render));
+  head.title = 'お知らせの一覧を見る';
+  const list = el('ul', 'news-list');
+  box.append(badge, head, list);
+  const render = () => {
+    const seen = seenNews();
+    const unread = news.filter((n) => !seen.has(newsKey(n))).length;
+    badge.hidden = !unread;
+    badge.textContent = unread ? String(unread) : '';
+    badge.setAttribute('aria-label', `まだ読んでいないお知らせが ${unread} 件`);
+    list.replaceChildren(
+      ...news.slice(0, 3).map((n) => {
+        const li = el('li', '');
+        const b = button('', 'news-item', () => openNews(news, n, render));
+        b.append(Object.assign(el('span', 'news-date'), { textContent: newsDate(n.date) }));
+        b.append(unreadDot(!seen.has(newsKey(n))));
+        b.append(Object.assign(el('span', 'news-title'), { textContent: n.title }));
+        li.append(b);
+        return li;
+      }),
+    );
+  };
+  render();
+  return box;
+}
+
+/**
+ * お知らせの窓。article がなければ記事の一覧から、あればその記事の本文から開く。
+ * 一覧の見出しを押すと本文へ、本文の「＜ 一覧へ」で一覧へもどる。onChange は、読んだ記事が増えたとき
+ */
+function openNews(news: NewsItem[], article: NewsItem | null, onChange: () => void) {
+  const root = el('div', 'confirm news-modal');
+  root.setAttribute('role', 'dialog');
+  root.setAttribute('aria-modal', 'true');
+  const panel = el('div', 'modal-panel news-panel');
+  const head = el('div', 'drawer-head');
+  const title = el('h2', '');
+  title.textContent = '📢 お知らせ';
+  const x = button('✕', 'icon-btn', () => close());
+  x.setAttribute('aria-label', '閉じる');
+  head.append(title, x);
+  const body = el('div', 'news-body');
+  panel.append(head, body);
+  root.append(panel);
+  document.body.append(root);
+
+  const showList = (focus?: NewsItem) => {
+    const seen = seenNews();
+    const ul = el('ul', 'news-index');
+    let target: HTMLButtonElement | null = null;
+    for (const n of news) {
+      const li = el('li', '');
+      const b = button('', 'news-index-item', () => showArticle(n));
+      b.append(Object.assign(el('span', 'news-date'), { textContent: newsDate(n.date) }));
+      b.append(unreadDot(!seen.has(newsKey(n))));
+      b.append(Object.assign(el('span', 'news-index-title'), { textContent: n.title }));
+      li.append(b);
+      ul.append(li);
+      if (n === focus) target = b;
+    }
+    body.replaceChildren(ul);
+    body.scrollTop = 0;
+    (target ?? (ul.querySelector('button') as HTMLButtonElement | null) ?? x).focus();
+  };
+
+  const showArticle = (n: NewsItem) => {
+    const back = button('＜ 一覧へ', 'ghost-btn news-back', () => showList(n));
+    const art = el('article', 'news-article');
+    art.append(
+      Object.assign(el('div', 'news-date'), { textContent: newsDate(n.date) }),
+      Object.assign(el('h3', 'news-article-title'), { textContent: n.title }),
+    );
+    for (const para of n.body) {
+      const p = el('p', '');
+      for (const part of splitCode(para)) {
+        const span = document.createElement('span');
+        if (part.code) span.className = 'cmd';
+        span.textContent = part.t;
+        p.append(span);
+      }
+      art.append(p);
+    }
+    body.replaceChildren(back, art);
+    body.scrollTop = 0;
+    back.focus();
+    markNewsSeen(n);
+    onChange();
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation();
+    close();
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey, true);
+    root.remove();
+    onChange();
+    (document.querySelector('#title .title-menu button') as HTMLButtonElement | null)?.focus();
+  };
+  root.addEventListener('click', (e) => e.target === root && close());
+  document.addEventListener('keydown', onKey, true);
+  if (article) showArticle(article);
+  else showList();
 }
 
 /** 章を選ぶ画面。選んだ章の番号を返す。もどるなら null */
 export function chooseChapter(items: { no: number; title: string; available: boolean }[]): Promise<number | null> {
   const t = document.getElementById('title')!;
+  t.classList.add('choosing');
+  // 「もどる」は、章が多くて画面に収まらないときも見えるように、いつも左上に置く
+  const back = button('＜ もどる', 'ghost-btn choose-back', () => {});
   const heading = el('h2', 'choose-title');
   heading.textContent = '章を選ぶ';
   const list = el('div', 'chapter-list');
   const note = el('p', 'choose-note');
   note.textContent = '選んだ章の、はじめから遊べます（その章のはじめに戻ります）';
-  const back = button('もどる', 'ghost-btn', () => {});
-  t.replaceChildren(heading, list, note, back);
+  const page = el('div', 'choose-page');
+  page.append(heading, note, list);
+  // 背景は、タイトルと同じ村の一枚絵を暗くして（字とボタンを読みやすく）
+  const art = el('div', 'choose-art');
+  art.style.backgroundImage = `url("${import.meta.env.BASE_URL}title.webp")`;
+  t.replaceChildren(art, back, page);
   t.hidden = false;
   return new Promise((resolve) => {
-    const done = (v: number | null) => resolve(v);
+    const done = (v: number | null) => {
+      document.removeEventListener('keydown', onKey);
+      t.classList.remove('choosing');
+      resolve(v);
+    };
+    // Esc でも、タイトルにもどる（確認の窓が出ているときは、そちらが先に受ける）
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('.confirm')) done(null);
+    };
     for (const it of items) {
       const b = button(`第${it.no}章　${it.title}`, 'chapter-item', () => done(it.no));
       if (!it.available) {
@@ -855,7 +1221,10 @@ export function chooseChapter(items: { no: number; title: string; available: boo
       }
       list.append(b);
     }
+    // 2列に分けて、左の列に前半を、右の列に後半を並べる
+    list.style.gridTemplateRows = `repeat(${Math.ceil(items.length / 2)}, auto)`;
     back.addEventListener('click', () => done(null));
+    document.addEventListener('keydown', onKey);
     (list.querySelector('button:not([disabled])') as HTMLButtonElement | null)?.focus();
   });
 }
@@ -994,6 +1363,8 @@ export function confirmDialog(o: {
   cancel: string;
   /** 取り消せないこと（進み具合が消えるなど）なら、決定のボタンを赤くする */
   danger?: boolean;
+  /** はじめに決定のボタンに合わせておく（取り消せない確認では使わない） */
+  focusOk?: boolean;
 }): Promise<boolean> {
   const root = el('div', 'confirm');
   root.setAttribute('role', 'alertdialog');
@@ -1026,7 +1397,7 @@ export function confirmDialog(o: {
     row.append(cancel, ok);
     root.addEventListener('click', (e) => e.target === root && close(false));
     document.addEventListener('keydown', onKey, true);
-    cancel.focus();
+    (o.focusOk ? ok : cancel).focus();
   });
 }
 

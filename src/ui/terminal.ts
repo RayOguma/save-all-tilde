@@ -28,6 +28,8 @@ export class Terminal implements Term {
   private abortRead: (() => void) | null = null;
   private readonly out: HTMLElement;
   private readonly promptEl: HTMLElement;
+  /** 入力欄の左の「$」。住所（promptEl）は入力欄の上の行に出し、入力欄を横いっぱいに使えるようにする */
+  private readonly markEl: HTMLElement;
   private readonly input: HTMLInputElement;
   private readonly inputLine: HTMLElement;
   private readonly suggestEl: HTMLElement;
@@ -61,11 +63,14 @@ export class Terminal implements Term {
     this.suggestEl = el('ul', 'suggest');
     this.suggestEl.setAttribute('role', 'listbox');
     this.inputLine = el('div', 'input-line');
-    this.promptEl = el('span', 'prompt');
+    this.promptEl = el('div', 'prompt');
+    this.markEl = el('span', 'prompt-mark');
     this.input = document.createElement('input');
     Object.assign(this.input, { autocomplete: 'off', spellcheck: false, autocapitalize: 'off', enterKeyHint: 'send' });
     this.input.setAttribute('aria-label', 'コマンド入力');
-    this.inputLine.append(this.promptEl, this.input);
+    const row = el('div', 'input-row');
+    row.append(this.markEl, this.input);
+    this.inputLine.append(this.promptEl, row);
     // 候補の行は、スクロールバーを出さずに、両端の矢印で横に送る
     const arrow = (dir: -1 | 1) => {
       const b = document.createElement('button');
@@ -99,6 +104,9 @@ export class Terminal implements Term {
     });
     // 会話の表示中にキーを押すと、残りを一気に表示する。表示し終えたせりふは、スペース（か Enter）で次へ
     document.addEventListener('keydown', (e) => {
+      // ほかの入力欄（手帳の検索など）で打っている文字は、会話を進めるのに使わない
+      const t = e.target as HTMLElement | null;
+      if (t !== this.input && (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement)) return;
       if (this.advance) {
         if ((e.key === ' ' || e.key === 'Enter') && !e.repeat && !this.overlayOpen()) {
           e.preventDefault();
@@ -399,7 +407,7 @@ export class Terminal implements Term {
     await this.flush();
     // キーを押すと速く打つ（会話と同じ）。いっしゅんの設定でも、打っている様子は見せる
     const ms = Math.max(40, Math.min(160, CHAR_MS[settings.speed] * 3 || 40));
-    this.promptEl.replaceChildren(...segs(prompt));
+    this.setPrompt(prompt);
     this.input.value = '';
     this.suggestFn = o.suggest;
     this.demoing = true;
@@ -450,7 +458,7 @@ export class Terminal implements Term {
     this.bar.classList.remove('demoing');
     badge.remove();
     this.input.value = '';
-    this.promptEl.replaceChildren();
+    this.setPrompt([]);
     this.setEnabled(false);
     this.busy = false;
     this.print([...prompt, { t: text, c: 'typed' }], 'echo demo');
@@ -492,6 +500,14 @@ export class Terminal implements Term {
     this.refreshSuggest();
   }
 
+  /** 入力欄の上の行に住所を、入力欄の左に「$」を出す（空なら、どちらも消す） */
+  private setPrompt(prompt: Seg[]) {
+    const last = prompt[prompt.length - 1];
+    const mark = last && last.t.trim() === '$';
+    this.promptEl.replaceChildren(...segs(mark ? prompt.slice(0, -1) : prompt));
+    this.markEl.textContent = mark ? '$' : '';
+  }
+
   /** 入力待ちを、外から打ち切る（時間制限）。readLine は INTERRUPTED を返す */
   interrupt() {
     this.abortRead?.();
@@ -505,7 +521,7 @@ export class Terminal implements Term {
     // そのまま入力待ちになるときは、最後のせりふのスペースは待たない
     this.pending = null;
 
-    this.promptEl.replaceChildren(...segs(prompt));
+    this.setPrompt(prompt);
     this.input.value = '';
     this.setEnabled(true);
     this.refreshSuggest();
@@ -516,7 +532,7 @@ export class Terminal implements Term {
         this.abortRead = null;
         this.input.removeEventListener('keydown', onKey);
         this.input.value = '';
-        this.promptEl.replaceChildren();
+        this.setPrompt([]);
         this.setEnabled(false);
         this.suggestions = [];
         this.renderSuggest();
@@ -552,7 +568,7 @@ export class Terminal implements Term {
           this.abortRead = null;
           this.input.removeEventListener('keydown', onKey);
           this.input.value = '';
-          this.promptEl.replaceChildren();
+          this.setPrompt([]);
           this.setEnabled(false);
           this.print([...prompt, { t: cancelled ? `${v}^C` : v, c: 'typed' }], 'echo');
           resolve(cancelled ? '' : v);
